@@ -17,6 +17,8 @@ class _InspectorPageState extends State<InspectorPage>
   final _hostController = TextEditingController(text: '127.0.0.1');
   final _portController = TextEditingController(text: '7321');
 
+  proto.TreeNode? _selected;
+
   @override
   void initState() {
     super.initState();
@@ -54,7 +56,15 @@ class _InspectorPageState extends State<InspectorPage>
       ),
       body: ValueListenableBuilder<proto.InspectorFrame?>(
         valueListenable: _connection.lastFrame,
-        builder: (context, frame, _) => ViewportView(frame: frame),
+        builder: (context, frame, _) => ViewportView(
+          frame: frame,
+          selected: _selected,
+          onHover: (node) {
+            if (!identical(node, _selected)) {
+              setState(() => _selected = node);
+            }
+          },
+        ),
       ),
     );
   }
