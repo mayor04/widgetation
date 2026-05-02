@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Flutter / Dart (build output, caches, generated)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+**/doc/api/
+.packages
+
+# Per-project pubspec.lock for the package is ignored at package level (libraries
+# should not commit pubspec.lock). The viewer (an app) commits its lock file.
+
+# fvm — keep config, ignore the symlinked SDK
+.fvm/flutter_sdk
+
+# Misc
+*.log
+*.swp
