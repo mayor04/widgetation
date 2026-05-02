@@ -1,3 +1,4 @@
-## Unreleased
+## 0.1.0
 
-* Package skeleton.
+* Initial release. `InspectorStreamer` widget + WebSocket server with
+  on-demand capture gated by viewer focus.
