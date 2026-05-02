@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'connection.dart';
+import 'frame.dart' as proto;
+import 'viewport_view.dart';
 
 class InspectorPage extends StatefulWidget {
   const InspectorPage({super.key});
@@ -50,7 +52,10 @@ class _InspectorPageState extends State<InspectorPage>
         ),
         actions: [_connectionBar()],
       ),
-      body: const Center(child: Text('Viewport coming soon')),
+      body: ValueListenableBuilder<proto.InspectorFrame?>(
+        valueListenable: _connection.lastFrame,
+        builder: (context, frame, _) => ViewportView(frame: frame),
+      ),
     );
   }
 
