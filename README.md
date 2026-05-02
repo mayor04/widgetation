@@ -1,6 +1,6 @@
 # Widgetation
 
-Two sibling Flutter projects:
+Two sibling Flutter projects, each with its own independent git repo:
 
 * [`widgetation/`](./widgetation) — pub.dev-ready Flutter package. Wrap
   your app with `InspectorStreamer` and it hosts an on-demand WebSocket
