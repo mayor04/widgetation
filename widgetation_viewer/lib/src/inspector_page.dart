@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'connection.dart';
 import 'frame.dart' as proto;
+import 'tree_panel.dart';
 import 'viewport_view.dart';
 
 class InspectorPage extends StatefulWidget {
@@ -56,15 +57,34 @@ class _InspectorPageState extends State<InspectorPage>
       ),
       body: ValueListenableBuilder<proto.InspectorFrame?>(
         valueListenable: _connection.lastFrame,
-        builder: (context, frame, _) => ViewportView(
-          frame: frame,
-          selected: _selected,
-          onHover: (node) {
-            if (!identical(node, _selected)) {
-              setState(() => _selected = node);
-            }
-          },
-        ),
+        builder: (context, frame, _) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 3,
+                child: ViewportView(
+                  frame: frame,
+                  selected: _selected,
+                  onHover: (node) {
+                    if (!identical(node, _selected)) {
+                      setState(() => _selected = node);
+                    }
+                  },
+                ),
+              ),
+              const VerticalDivider(width: 1),
+              SizedBox(
+                width: 360,
+                child: TreePanel(
+                  frame: frame,
+                  selected: _selected,
+                  onSelect: (n) => setState(() => _selected = n),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
