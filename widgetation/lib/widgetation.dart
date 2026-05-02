@@ -6,3 +6,4 @@
 library;
 
 export 'src/config.dart' show WidgetationConfig;
+export 'src/inspector_streamer.dart' show InspectorStreamer;
