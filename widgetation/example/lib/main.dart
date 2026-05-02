@@ -3,7 +3,7 @@ import 'package:widgetation/widgetation.dart';
 
 void main() {
   runApp(
-    const InspectorStreamer(
+    const Widgetation(
       config: WidgetationConfig(name: 'widgetation example', fps: 8),
       child: ExampleApp(),
     ),
@@ -54,10 +54,7 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    Text(
-                      'Counter: $_counter',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
+                    Text('Counter: $_counter', style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,

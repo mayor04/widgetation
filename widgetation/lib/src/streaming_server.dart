@@ -4,16 +4,12 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import 'protocol/messages.dart';
+
 /// Minimal WebSocket server that hosts at most one active viewer at a time.
 ///
-/// The protocol is JSON-only:
-///   client -> server: {"type": "focus", "focused": true|false}
-///                     {"type": "hello", "fps": 8}
-///   server -> client: `{"type": "hello", "name": "...", "version": 1}`
-///                     `{"type": "frame", "timestamp": ..., "screenshot": "(base64 PNG)",`
-///                     ` "devicePixelRatio": 2.0,`
-///                     ` "screenSize": {"w": 390, "h": 844},`
-///                     ` "tree": [...]}`
+/// Wire format is JSON; messages are modelled by [ViewerMessage] (incoming)
+/// and [ServerMessage] (outgoing).
 class StreamingServer {
   final String host;
   final int port;
@@ -22,14 +18,13 @@ class StreamingServer {
   HttpServer? _server;
   WebSocket? _socket;
 
-  /// Fired when the focus state of the connected viewer changes (or when a
-  /// viewer connects/disconnects). The bool reflects "should the streamer
-  /// be capturing right now?" — i.e. true only when a viewer is connected
-  /// AND focused.
+  /// True only when a viewer is connected AND focused — i.e. the streamer
+  /// should be capturing right now.
   final ValueNotifier<bool> shouldCapture = ValueNotifier(false);
 
-  /// Last requested fps from the viewer, or null to use server default.
-  int? requestedFps;
+  /// Last requested fps from the viewer, or null to fall back to the
+  /// server's configured default.
+  final ValueNotifier<int?> requestedFps = ValueNotifier<int?>(null);
 
   StreamingServer({
     required this.host,
@@ -79,13 +74,14 @@ class StreamingServer {
       _socket!.close(WebSocketStatus.policyViolation, 'replaced');
     }
     _socket = ws;
-    _send({'type': 'hello', 'name': name, 'version': 1});
+    send(ServerHello(name: name));
     ws.listen(
       (dynamic data) {
         if (data is! String) return;
         try {
-          final msg = jsonDecode(data) as Map<String, dynamic>;
-          _onMessage(msg);
+          final json = jsonDecode(data) as Map<String, Object?>;
+          final msg = ViewerMessage.parse(json);
+          if (msg != null) _onMessage(msg);
         } catch (e) {
           debugPrint('[widgetation] bad message: $e');
         }
@@ -93,7 +89,7 @@ class StreamingServer {
       onDone: () {
         if (identical(_socket, ws)) {
           _socket = null;
-          requestedFps = null;
+          requestedFps.value = null;
           shouldCapture.value = false;
         }
       },
@@ -106,28 +102,20 @@ class StreamingServer {
     shouldCapture.value = false;
   }
 
-  void _onMessage(Map<String, dynamic> msg) {
-    switch (msg['type']) {
-      case 'focus':
-        final focused = msg['focused'] == true;
+  void _onMessage(ViewerMessage msg) {
+    switch (msg) {
+      case FocusMessage(:final focused):
         shouldCapture.value = focused && _socket != null;
-      case 'hello':
-        final fps = msg['fps'];
-        if (fps is int) requestedFps = fps;
+      case HelloMessage(:final fps):
+        if (fps != null) requestedFps.value = fps;
     }
   }
 
-  void sendFrame(Map<String, dynamic> frame) {
+  void send(ServerMessage msg) {
     final s = _socket;
     if (s == null) return;
-    _send(frame, socket: s);
-  }
-
-  void _send(Map<String, dynamic> obj, {WebSocket? socket}) {
-    final s = socket ?? _socket;
-    if (s == null) return;
     try {
-      s.add(jsonEncode(obj));
+      s.add(jsonEncode(msg.toJson()));
     } catch (e) {
       debugPrint('[widgetation] send failed: $e');
     }

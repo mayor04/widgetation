@@ -5,7 +5,7 @@ import 'package:widgetation/widgetation.dart';
 void main() {
   testWidgets('InspectorStreamer renders its child', (tester) async {
     await tester.pumpWidget(
-      const InspectorStreamer(
+      const Widgetation(
         config: WidgetationConfig(enabled: false),
         child: MaterialApp(home: Text('hello')),
       ),

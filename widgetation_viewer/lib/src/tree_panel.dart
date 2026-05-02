@@ -81,14 +81,14 @@ class _TreePanelState extends State<TreePanel> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: node.isFlutterWidget
-                                ? FontWeight.w400
-                                : FontWeight.w600,
+                            fontWeight: node.isUserWidget
+                                ? FontWeight.w600
+                                : FontWeight.w400,
                             color: isSelected
                                 ? Theme.of(context).colorScheme.onPrimaryContainer
-                                : node.isFlutterWidget
-                                    ? null
-                                    : Theme.of(context).colorScheme.primary,
+                                : node.isUserWidget
+                                    ? Theme.of(context).colorScheme.primary
+                                    : null,
                           ),
                         ),
                       ),
@@ -131,15 +131,7 @@ class _PropertyView extends StatelessWidget {
     if (n == null) {
       return const Center(child: Text('Hover a widget to inspect'));
     }
-    final small = Theme.of(context).textTheme.bodySmall;
-    final mono = small?.copyWith(fontFamily: 'monospace');
-    final muted = small?.copyWith(
-      fontFamily: 'monospace',
-      color: Theme.of(context).colorScheme.outline,
-    );
-    final parent = n.parent;
-    final ancestors = n.topAncestors(4);
-    final closest = n.nearestNonFlutterAncestor;
+    final chain = n.pathFromUserAncestor;
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
@@ -154,34 +146,30 @@ class _PropertyView extends StatelessWidget {
           'depth ${n.depth} • '
           '${n.w.toStringAsFixed(1)}×${n.h.toStringAsFixed(1)} '
           '@ (${n.x.toStringAsFixed(1)}, ${n.y.toStringAsFixed(1)})',
-          style: small,
+          style: Theme.of(context).textTheme.bodySmall,
         ),
+        if (chain.length > 1) ...[
+          const SizedBox(height: 4),
+          Text(
+            chain.map((c) => c.type).join(' › '),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                ),
+          ),
+        ],
+        if (n.file != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            n.line != null ? '${n.file}:${n.line}' : n.file!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+          ),
+        ],
         if (n.key != null) ...[
           const SizedBox(height: 4),
-          Text('key: ${n.key}', style: small),
-        ],
-        const SizedBox(height: 12),
-        Text('Parent', style: small),
-        Text(parent?.type ?? '(none)', style: mono),
-        const SizedBox(height: 8),
-        Text('Top 4 ancestors', style: small),
-        if (ancestors.isEmpty)
-          Text('(none)', style: mono)
-        else
-          ...ancestors.map((a) => Text(a.type, style: mono)),
-        const SizedBox(height: 8),
-        Text('Closest non-flutter ancestor', style: small),
-        if (closest == null)
-          Text('(none)', style: mono)
-        else ...[
-          Text(closest.type, style: mono),
-          if (closest.file != null)
-            Text(
-              closest.line != null
-                  ? '${closest.file}:${closest.line}'
-                  : closest.file!,
-              style: muted,
-            ),
+          Text('key: ${n.key}', style: Theme.of(context).textTheme.bodySmall),
         ],
         const Divider(height: 24),
         if (n.props.isEmpty)
