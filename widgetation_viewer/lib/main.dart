@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'src/inspector_page.dart';
+
 void main() {
   runApp(const WidgetationViewerApp());
 }
@@ -16,9 +18,7 @@ class WidgetationViewerApp extends StatelessWidget {
         brightness: Brightness.dark,
         useMaterial3: true,
       ),
-      home: const Scaffold(
-        body: Center(child: Text('Widgetation Viewer')),
-      ),
+      home: const InspectorPage(),
     );
   }
 }
