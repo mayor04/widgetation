@@ -48,7 +48,6 @@ class TreeNode {
   final List<String> props;
   final String? key;
   final List<TreeNode> children;
-  final bool isUserWidget;
   final String? file;
   final int? line;
 
@@ -65,7 +64,6 @@ class TreeNode {
     required this.props,
     required this.key,
     required this.children,
-    required this.isUserWidget,
     this.file,
     this.line,
   });
@@ -75,30 +73,38 @@ class TreeNode {
 
   double get area => w * h;
 
-  /// Walks up the parent chain and returns the nearest ancestor (inclusive
-  /// of `this`) whose widget is user-defined. Null if there is no such
-  /// ancestor — e.g. the entire tree is framework widgets.
-  TreeNode? get nearestUserAncestor {
-    TreeNode? n = this;
+  /// True when this node's creation-location file is inside the Flutter SDK
+  /// (either a `package:flutter/...` import or an absolute path through
+  /// `.../packages/flutter/...`). A missing file is treated as flutter so
+  /// unannotated framework nodes don't pose as user code.
+  bool get isFlutterWidget {
+    final f = file;
+    if (f == null) return true;
+    return f.startsWith('package:flutter/') || f.contains('/packages/flutter/');
+  }
+
+  /// Walks up the parent chain (excluding `this`) and returns the nearest
+  /// ancestor whose widget is defined outside the Flutter SDK. Null if
+  /// every ancestor is framework code.
+  TreeNode? get nearestNonFlutterAncestor {
+    var n = parent;
     while (n != null) {
-      if (n.isUserWidget) return n;
+      if (!n.isFlutterWidget) return n;
       n = n.parent;
     }
     return null;
   }
 
-  /// Path from `this` up to (and including) the nearest user-widget ancestor,
-  /// in display order: `[userAncestor, ..., this]`. If no user ancestor
-  /// exists, returns just `[this]`.
-  List<TreeNode> get pathFromUserAncestor {
-    final stack = <TreeNode>[];
-    TreeNode? n = this;
-    while (n != null) {
-      stack.add(n);
-      if (n.isUserWidget && n != this) break;
+  /// The first [count] ancestors above `this`, ordered from immediate parent
+  /// outward. Stops short if the chain ends before [count] entries.
+  List<TreeNode> topAncestors(int count) {
+    final out = <TreeNode>[];
+    var n = parent;
+    while (n != null && out.length < count) {
+      out.add(n);
       n = n.parent;
     }
-    return stack.reversed.toList();
+    return out;
   }
 
   factory TreeNode.fromJson(Map<String, dynamic> json, TreeNode? parent) {
@@ -111,7 +117,6 @@ class TreeNode {
       h: (json['h'] as num).toDouble(),
       props: (json['props'] as List? ?? const []).cast<String>(),
       key: json['key'] as String?,
-      isUserWidget: json['isUserWidget'] as bool? ?? false,
       file: json['file'] as String?,
       line: (json['line'] as num?)?.toInt(),
       children: <TreeNode>[],
