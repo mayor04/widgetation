@@ -9,13 +9,29 @@ class InspectorPage extends StatefulWidget {
   State<InspectorPage> createState() => _InspectorPageState();
 }
 
-class _InspectorPageState extends State<InspectorPage> {
+class _InspectorPageState extends State<InspectorPage>
+    with WidgetsBindingObserver {
   final _connection = ConnectionController();
   final _hostController = TextEditingController(text: '127.0.0.1');
   final _portController = TextEditingController(text: '7321');
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // On desktop, `inactive` fires when the window loses focus and `resumed`
+    // when it regains. We use that as our viewer-focused signal.
+    final focused = state == AppLifecycleState.resumed;
+    _connection.setFocused(focused);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _connection.dispose();
     _hostController.dispose();
     _portController.dispose();
