@@ -1,0 +1,20 @@
+name: widgetation
+description: On-demand widget tree streamer for Flutter. Wrap your app and inspect it live from a desktop viewer over the local network.
+version: 0.1.0
+homepage: https://github.com/example/widgetation
+repository: https://github.com/example/widgetation
+
+environment:
+  sdk: ^3.11.1
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
