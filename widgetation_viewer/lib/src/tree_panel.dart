@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'frame.dart' as proto;
 
 /// Right-hand side panel: full collapsible widget tree on top, properties
-/// panel for the selected node on the bottom (properties content lands in
-/// a subsequent commit).
+/// panel for the selected node on the bottom.
 class TreePanel extends StatefulWidget {
   final proto.InspectorFrame? frame;
   final proto.TreeNode? selected;
@@ -96,7 +95,7 @@ class _TreePanelState extends State<TreePanel> {
           ),
         ),
         const Divider(height: 1),
-        const Expanded(flex: 2, child: SizedBox.shrink()),
+        Expanded(flex: 2, child: _PropertyView(node: widget.selected)),
       ],
     );
   }
@@ -115,4 +114,47 @@ class _Row {
   final proto.TreeNode node;
   final int indent;
   _Row(this.node, this.indent);
+}
+
+class _PropertyView extends StatelessWidget {
+  final proto.TreeNode? node;
+  const _PropertyView({required this.node});
+
+  @override
+  Widget build(BuildContext context) {
+    final n = node;
+    if (n == null) {
+      return const Center(child: Text('Hover a widget to inspect'));
+    }
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        Text(
+          n.type,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'depth ${n.depth} • '
+          '${n.w.toStringAsFixed(1)}×${n.h.toStringAsFixed(1)} '
+          '@ (${n.x.toStringAsFixed(1)}, ${n.y.toStringAsFixed(1)})',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        if (n.key != null) ...[
+          const SizedBox(height: 4),
+          Text('key: ${n.key}', style: Theme.of(context).textTheme.bodySmall),
+        ],
+        const Divider(height: 24),
+        if (n.props.isEmpty)
+          const Text('(no diagnostic properties)')
+        else
+          ...n.props.map((p) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(p, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+              )),
+      ],
+    );
+  }
 }
