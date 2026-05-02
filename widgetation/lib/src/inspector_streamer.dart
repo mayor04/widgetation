@@ -62,8 +62,18 @@ class _InspectorStreamerState extends State<InspectorStreamer> {
       debugPrint('[widgetation] failed to bind ${cfg.host}:${cfg.port}: $e');
       return;
     }
+    server.shouldCapture.addListener(_onShouldCaptureChanged);
     _server = server;
-    _startCapture();
+    if (server.shouldCapture.value) _onShouldCaptureChanged();
+  }
+
+  void _onShouldCaptureChanged() {
+    final should = _server?.shouldCapture.value ?? false;
+    if (should) {
+      _startCapture();
+    } else {
+      _stopCapture();
+    }
   }
 
   void _startCapture() {
@@ -72,6 +82,11 @@ class _InspectorStreamerState extends State<InspectorStreamer> {
     final fps = (_server?.requestedFps ?? cfg.clampedFps).clamp(1, 30);
     final period = Duration(milliseconds: (1000 / fps).round());
     _captureTimer = Timer.periodic(period, (_) => _captureOnce());
+  }
+
+  void _stopCapture() {
+    _captureTimer?.cancel();
+    _captureTimer = null;
   }
 
   Future<void> _captureOnce() async {
@@ -122,6 +137,7 @@ class _InspectorStreamerState extends State<InspectorStreamer> {
   @override
   void dispose() {
     _captureTimer?.cancel();
+    _server?.shouldCapture.removeListener(_onShouldCaptureChanged);
     _server?.stop();
     super.dispose();
   }
