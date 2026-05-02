@@ -4,3 +4,5 @@
 /// package will host a local WebSocket server that streams the widget
 /// tree to a desktop viewer.
 library;
+
+export 'src/config.dart' show WidgetationConfig;
