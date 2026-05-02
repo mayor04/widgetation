@@ -35,9 +35,7 @@ class ConnectionController {
       _send({'type': 'hello', 'fps': 8});
       _send({'type': 'focus', 'focused': _focused});
       ws.listen(
-        (dynamic _) {
-          // Inbound message decoding lands in the next commit.
-        },
+        _onData,
         onDone: () {
           if (status.value != ConnectionStatus.error) {
             status.value = ConnectionStatus.disconnected;
@@ -70,6 +68,21 @@ class ConnectionController {
     if (_focused == focused) return;
     _focused = focused;
     _send({'type': 'focus', 'focused': focused});
+  }
+
+  void _onData(dynamic data) {
+    if (data is! String) return;
+    try {
+      final msg = jsonDecode(data) as Map<String, dynamic>;
+      switch (msg['type']) {
+        case 'hello':
+          serverName.value = msg['name'] as String?;
+        case 'frame':
+          lastFrame.value = InspectorFrame.fromJson(msg);
+      }
+    } catch (e) {
+      debugPrint('[viewer] bad frame: $e');
+    }
   }
 
   void _send(Map<String, dynamic> obj) {
