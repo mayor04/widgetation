@@ -9,21 +9,42 @@ import 'package:flutter/widgets.dart';
 /// zero-area rect so the viewer's hit-testing skips them naturally.
 List<Map<String, dynamic>> walkTree(Element root) {
   final out = <Map<String, dynamic>>[];
-  _visit(root, 0, out);
+  // Reuse one delegate; we only call additionalNodeProperties on it, never
+  // toJsonMap, so subtreeDepth/groupName are irrelevant.
+  // InspectorSerializationDelegate is annotated @visibleForTesting but is
+  // the only public surface that exposes creation-location data.
+  // ignore: invalid_use_of_visible_for_testing_member
+  final delegate = InspectorSerializationDelegate(
+    service: WidgetInspectorService.instance,
+    includeProperties: false,
+    subtreeDepth: 0,
+  );
+  _visit(root, 0, out, delegate);
   return out;
 }
 
-void _visit(Element element, int depth, List<Map<String, dynamic>> out) {
-  final node = _describe(element, depth);
+void _visit(
+  Element element,
+  int depth,
+  List<Map<String, dynamic>> out,
+  // ignore: invalid_use_of_visible_for_testing_member
+  InspectorSerializationDelegate delegate,
+) {
+  final node = _describe(element, depth, delegate);
   final children = <Map<String, dynamic>>[];
   element.visitChildren((child) {
-    _visit(child, depth + 1, children);
+    _visit(child, depth + 1, children, delegate);
   });
   node['children'] = children;
   out.add(node);
 }
 
-Map<String, dynamic> _describe(Element element, int depth) {
+Map<String, dynamic> _describe(
+  Element element,
+  int depth,
+  // ignore: invalid_use_of_visible_for_testing_member
+  InspectorSerializationDelegate delegate,
+) {
   final widget = element.widget;
   final renderObject = element.renderObject;
 
@@ -39,7 +60,7 @@ Map<String, dynamic> _describe(Element element, int depth) {
     h = size.height;
   }
 
-  return <String, dynamic>{
+  final result = <String, dynamic>{
     'type': widget.runtimeType.toString(),
     'depth': depth,
     'x': x,
@@ -49,6 +70,35 @@ Map<String, dynamic> _describe(Element element, int depth) {
     'props': _propertiesOf(widget),
     'key': widget.key?.toString(),
   };
+
+  // Creation location requires --track-widget-creation (debug builds get
+  // this by default). When unavailable, fall back to a name heuristic.
+  final extras = delegate.additionalNodeProperties(
+    widget.toDiagnosticsNode(),
+    fullDetails: true,
+  );
+  final loc = extras['creationLocation'] as Map<Object?, Object?>?;
+  if (loc != null) {
+    final file = loc['file'] as String?;
+    final line = loc['line'];
+    if (file != null) {
+      result['file'] = file;
+      if (line is int) result['line'] = line;
+      result['isUserWidget'] = !file.startsWith('package:flutter/');
+    }
+  } else {
+    result['isUserWidget'] = _looksLikeUserWidget(widget.runtimeType.toString());
+  }
+
+  return result;
+}
+
+/// Fallback when creation-location tracking is off: any private (`_Foo`)
+/// type is assumed framework, everything else is treated as user code. Crude
+/// but only ever over-reports user widgets.
+bool _looksLikeUserWidget(String type) {
+  final base = type.split('<').first;
+  return !base.startsWith('_');
 }
 
 /// Best-effort collection of diagnostic properties as `name: value` strings.

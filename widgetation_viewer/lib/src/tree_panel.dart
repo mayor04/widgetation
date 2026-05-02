@@ -81,9 +81,14 @@ class _TreePanelState extends State<TreePanel> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
+                            fontWeight: node.isUserWidget
+                                ? FontWeight.w600
+                                : FontWeight.w400,
                             color: isSelected
                                 ? Theme.of(context).colorScheme.onPrimaryContainer
-                                : null,
+                                : node.isUserWidget
+                                    ? Theme.of(context).colorScheme.primary
+                                    : null,
                           ),
                         ),
                       ),
@@ -126,6 +131,7 @@ class _PropertyView extends StatelessWidget {
     if (n == null) {
       return const Center(child: Text('Hover a widget to inspect'));
     }
+    final chain = n.pathFromUserAncestor;
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
@@ -142,6 +148,25 @@ class _PropertyView extends StatelessWidget {
           '@ (${n.x.toStringAsFixed(1)}, ${n.y.toStringAsFixed(1)})',
           style: Theme.of(context).textTheme.bodySmall,
         ),
+        if (chain.length > 1) ...[
+          const SizedBox(height: 4),
+          Text(
+            chain.map((c) => c.type).join(' › '),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                ),
+          ),
+        ],
+        if (n.file != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            n.line != null ? '${n.file}:${n.line}' : n.file!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+          ),
+        ],
         if (n.key != null) ...[
           const SizedBox(height: 4),
           Text('key: ${n.key}', style: Theme.of(context).textTheme.bodySmall),

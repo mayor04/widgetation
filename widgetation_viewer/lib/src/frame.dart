@@ -20,6 +20,7 @@ class InspectorFrame {
   factory InspectorFrame.fromJson(Map<String, dynamic> json) {
     final size = json['screenSize'] as Map<String, dynamic>;
     final treeJson = (json['tree'] as List).cast<Map<String, dynamic>>();
+    final tree = treeJson.map((j) => TreeNode.fromJson(j, null)).toList();
     return InspectorFrame(
       timestamp: (json['timestamp'] as num).toInt(),
       devicePixelRatio: (json['devicePixelRatio'] as num).toDouble(),
@@ -28,7 +29,7 @@ class InspectorFrame {
         (size['h'] as num).toDouble(),
       ),
       png: base64Decode(json['screenshot'] as String),
-      tree: treeJson.map(TreeNode.fromJson).toList(),
+      tree: tree,
     );
   }
 }
@@ -47,6 +48,12 @@ class TreeNode {
   final List<String> props;
   final String? key;
   final List<TreeNode> children;
+  final bool isUserWidget;
+  final String? file;
+  final int? line;
+
+  /// Parent is set during construction; null only for root nodes.
+  TreeNode? parent;
 
   TreeNode({
     required this.type,
@@ -58,6 +65,9 @@ class TreeNode {
     required this.props,
     required this.key,
     required this.children,
+    required this.isUserWidget,
+    this.file,
+    this.line,
   });
 
   bool contains(double px, double py) =>
@@ -65,12 +75,34 @@ class TreeNode {
 
   double get area => w * h;
 
-  factory TreeNode.fromJson(Map<String, dynamic> json) {
-    final children = (json['children'] as List? ?? const [])
-        .cast<Map<String, dynamic>>()
-        .map(TreeNode.fromJson)
-        .toList();
-    return TreeNode(
+  /// Walks up the parent chain and returns the nearest ancestor (inclusive
+  /// of `this`) whose widget is user-defined. Null if there is no such
+  /// ancestor — e.g. the entire tree is framework widgets.
+  TreeNode? get nearestUserAncestor {
+    TreeNode? n = this;
+    while (n != null) {
+      if (n.isUserWidget) return n;
+      n = n.parent;
+    }
+    return null;
+  }
+
+  /// Path from `this` up to (and including) the nearest user-widget ancestor,
+  /// in display order: `[userAncestor, ..., this]`. If no user ancestor
+  /// exists, returns just `[this]`.
+  List<TreeNode> get pathFromUserAncestor {
+    final stack = <TreeNode>[];
+    TreeNode? n = this;
+    while (n != null) {
+      stack.add(n);
+      if (n.isUserWidget && n != this) break;
+      n = n.parent;
+    }
+    return stack.reversed.toList();
+  }
+
+  factory TreeNode.fromJson(Map<String, dynamic> json, TreeNode? parent) {
+    final node = TreeNode(
       type: json['type'] as String,
       depth: (json['depth'] as num).toInt(),
       x: (json['x'] as num).toDouble(),
@@ -79,8 +111,18 @@ class TreeNode {
       h: (json['h'] as num).toDouble(),
       props: (json['props'] as List? ?? const []).cast<String>(),
       key: json['key'] as String?,
-      children: children,
+      isUserWidget: json['isUserWidget'] as bool? ?? false,
+      file: json['file'] as String?,
+      line: (json['line'] as num?)?.toInt(),
+      children: <TreeNode>[],
     );
+    node.parent = parent;
+    final childJson = (json['children'] as List? ?? const [])
+        .cast<Map<String, dynamic>>();
+    for (final j in childJson) {
+      node.children.add(TreeNode.fromJson(j, node));
+    }
+    return node;
   }
 }
 
