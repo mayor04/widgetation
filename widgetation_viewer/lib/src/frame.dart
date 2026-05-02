@@ -45,12 +45,18 @@ class TreeNode {
   final String type;
   final int depth;
   final double x, y, w, h;
-  final List<String> props;
+  final Map<String, String> widgetProperties;
   final String? key;
   final List<TreeNode> children;
-  final bool isUserWidget;
   final String? file;
   final int? line;
+
+  /// Set when this node was the picker's selection target.
+  final String? nearestWidget;
+
+  /// Set when this node was the picker's selection target. Outermost-first,
+  /// last entry is this node's own type.
+  final List<String> ancestors;
 
   /// Parent is set during construction; null only for root nodes.
   TreeNode? parent;
@@ -62,10 +68,11 @@ class TreeNode {
     required this.y,
     required this.w,
     required this.h,
-    required this.props,
+    required this.widgetProperties,
     required this.key,
     required this.children,
-    required this.isUserWidget,
+    required this.nearestWidget,
+    required this.ancestors,
     this.file,
     this.line,
   });
@@ -75,33 +82,18 @@ class TreeNode {
 
   double get area => w * h;
 
-  /// Walks up the parent chain and returns the nearest ancestor (inclusive
-  /// of `this`) whose widget is user-defined. Null if there is no such
-  /// ancestor — e.g. the entire tree is framework widgets.
-  TreeNode? get nearestUserAncestor {
-    TreeNode? n = this;
-    while (n != null) {
-      if (n.isUserWidget) return n;
-      n = n.parent;
-    }
-    return null;
-  }
-
-  /// Path from `this` up to (and including) the nearest user-widget ancestor,
-  /// in display order: `[userAncestor, ..., this]`. If no user ancestor
-  /// exists, returns just `[this]`.
-  List<TreeNode> get pathFromUserAncestor {
-    final stack = <TreeNode>[];
-    TreeNode? n = this;
-    while (n != null) {
-      stack.add(n);
-      if (n.isUserWidget && n != this) break;
-      n = n.parent;
-    }
-    return stack.reversed.toList();
+  /// True when this node's creation-location points inside the Flutter SDK
+  /// (or is unknown). Mirrors the streamer's `isFlutterWidgetFile` check;
+  /// kept in sync there.
+  bool get isFlutterWidget {
+    final f = file;
+    if (f == null) return true;
+    return f.startsWith('package:flutter/') || f.contains('/packages/flutter/');
   }
 
   factory TreeNode.fromJson(Map<String, dynamic> json, TreeNode? parent) {
+    final propsJson = json['widgetProperties'] as Map<String, dynamic>?;
+    final ancestorsJson = json['ancestors'] as List?;
     final node = TreeNode(
       type: json['type'] as String,
       depth: (json['depth'] as num).toInt(),
@@ -109,11 +101,16 @@ class TreeNode {
       y: (json['y'] as num).toDouble(),
       w: (json['w'] as num).toDouble(),
       h: (json['h'] as num).toDouble(),
-      props: (json['props'] as List? ?? const []).cast<String>(),
+      widgetProperties: propsJson == null
+          ? const <String, String>{}
+          : propsJson.map((k, v) => MapEntry(k, v.toString())),
       key: json['key'] as String?,
-      isUserWidget: json['isUserWidget'] as bool? ?? false,
       file: json['file'] as String?,
       line: (json['line'] as num?)?.toInt(),
+      nearestWidget: json['nearestWidget'] as String?,
+      ancestors: ancestorsJson == null
+          ? const <String>[]
+          : ancestorsJson.cast<String>(),
       children: <TreeNode>[],
     );
     node.parent = parent;

@@ -2,11 +2,23 @@ import 'package:flutter/widgets.dart';
 
 import 'protocol/tree_node.dart';
 
+/// True when [file] points inside the Flutter SDK. Catches both
+/// `package:flutter/...` import URIs and absolute SDK paths like
+/// `file:///.../packages/flutter/lib/src/material/list_tile.dart`.
+/// A null [file] means creation-location data is unavailable, which we
+/// treat as flutter-side so unannotated nodes don't masquerade as user
+/// widgets.
+bool isFlutterWidgetFile(String? file) {
+  if (file == null) return true;
+  return file.startsWith('package:flutter/') ||
+      file.contains('/packages/flutter/');
+}
+
 /// Walks an [Element] tree and produces typed [TreeNode]s.
 ///
 /// Each node carries its runtime type, depth, global rect (logical pixels),
-/// a small set of diagnostic property summaries, and — when available —
-/// creation-location metadata used to flag user-defined widgets.
+/// a small map of diagnostic property summaries, and — when available —
+/// creation-location metadata.
 ///
 /// Subtrees whose render object is not a [RenderBox], lacks a size, or is
 /// not attached are still emitted (so structure isn't lost) but report a
@@ -31,10 +43,48 @@ class TreeBuilder {
     return out;
   }
 
-  /// Describe a single element (no children walked). Used by [WidgetPicker]
-  /// when we only need leaf info for the deepest hit, not a whole tree.
+  /// Describe a single element (no children walked, no ancestor lookup).
   TreeNode describeOnly(Element element, int depth) =>
       _describe(element, depth, const <TreeNode>[]);
+
+  /// Describe a single element and overlay ancestry metadata: the nearest
+  /// non-flutter ancestor's widget name (or its source file as a fallback)
+  /// plus an outermost-first list of up to 4 type names ending with this
+  /// element's own type. Used by [WidgetPicker] when reporting the picked
+  /// node so an LLM consumer can place it in context without re-walking.
+  TreeNode describeWithAncestry(Element element, int depth) {
+    final base = _describe(element, depth, const <TreeNode>[]);
+
+    final ancestorTypes = <String>[]; // closest first; reversed at the end
+    String? nearest;
+
+    element.visitAncestorElements((ancestor) {
+      final widget = ancestor.widget;
+      final typeName = widget.runtimeType.toString();
+
+      if (ancestorTypes.length < 3) {
+        ancestorTypes.add(typeName);
+      }
+
+      if (nearest == null) {
+        final file = _creationFile(widget);
+        if (!isFlutterWidgetFile(file)) {
+          // Private/anonymous types aren't useful as a label — fall back
+          // to the source file when we hit one of those.
+          nearest = typeName.startsWith('_') ? file : typeName;
+        }
+      }
+
+      return ancestorTypes.length < 3 || nearest == null;
+    });
+
+    final ancestors = <String>[
+      ...ancestorTypes.reversed,
+      base.type,
+    ];
+
+    return base.copyWith(nearestWidget: nearest, ancestors: ancestors);
+  }
 
   void _visit(Element element, int depth, List<TreeNode> out) {
     final children = <TreeNode>[];
@@ -55,8 +105,6 @@ class TreeBuilder {
 
     String? file;
     int? line;
-    bool isUserWidget;
-
     final extras = _delegate.additionalNodeProperties(
       widget.toDiagnosticsNode(),
       fullDetails: true,
@@ -65,42 +113,43 @@ class TreeBuilder {
     if (loc != null && loc['file'] is String) {
       file = loc['file'] as String;
       if (loc['line'] is int) line = loc['line'] as int;
-      isUserWidget = !file.startsWith('package:flutter/');
-    } else {
-      // Creation-location tracking is off; fall back to a name heuristic.
-      // Private (`_Foo`) types are assumed framework, everything else user.
-      isUserWidget = !widget.runtimeType.toString().split('<').first.startsWith('_');
     }
 
     return TreeNode(
       type: widget.runtimeType.toString(),
       depth: depth,
       rect: rect,
-      props: _propertiesOf(widget),
+      widgetProperties: _propertiesOf(widget),
       key: widget.key?.toString(),
-      isUserWidget: isUserWidget,
       file: file,
       line: line,
       children: children,
     );
   }
 
-  /// Best-effort collection of diagnostic properties as `name: value` strings.
-  static List<String> _propertiesOf(Widget widget) {
+  String? _creationFile(Widget widget) {
+    final extras = _delegate.additionalNodeProperties(
+      widget.toDiagnosticsNode(),
+      fullDetails: true,
+    );
+    final loc = extras['creationLocation'] as Map<Object?, Object?>?;
+    return loc?['file'] as String?;
+  }
+
+  /// Best-effort collection of diagnostic properties as a name → value map.
+  /// Capped at 16 entries; later duplicates of the same name are ignored.
+  static Map<String, String> _propertiesOf(Widget widget) {
     final node = widget.toDiagnosticsNode();
     final props = node.getProperties();
-    final result = <String>[];
+    final result = <String, String>{};
     for (final p in props) {
       if (p.level == DiagnosticLevel.hidden) continue;
       if (!_isInteresting(p)) continue;
       final name = p.name;
-      final value = p.toDescription();
-      if (name == null || name.isEmpty) {
-        result.add(value);
-      } else {
-        result.add('$name: $value');
-      }
-      if (result.length >= 16) break; // cap payload size
+      if (name == null || name.isEmpty) continue;
+      if (result.containsKey(name)) continue;
+      result[name] = p.toDescription();
+      if (result.length >= 16) break;
     }
     return result;
   }

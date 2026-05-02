@@ -203,7 +203,14 @@ class _WidgetationState extends State<Widgetation> {
     final root = _root();
     if (picker == null || root == null) return;
     setState(() => _selected = picker.findAt(root, pos));
-    print('#--> ${_selected?.file}');
+    final s = _selected;
+    if (s != null) {
+      debugPrint('#--> type=${s.type}');
+      debugPrint('     nearest=${s.nearestWidget}');
+      debugPrint('     ancestors=${s.ancestors.join(' › ')}');
+      debugPrint('     file=${s.file}:${s.line}');
+      debugPrint('     props=${s.widgetProperties}');
+    }
   }
 
   void _onPanDown(DragDownDetails d) {

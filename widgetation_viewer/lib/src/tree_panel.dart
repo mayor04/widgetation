@@ -81,14 +81,14 @@ class _TreePanelState extends State<TreePanel> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: node.isUserWidget
-                                ? FontWeight.w600
-                                : FontWeight.w400,
+                            fontWeight: node.isFlutterWidget
+                                ? FontWeight.w400
+                                : FontWeight.w600,
                             color: isSelected
                                 ? Theme.of(context).colorScheme.onPrimaryContainer
-                                : node.isUserWidget
-                                    ? Theme.of(context).colorScheme.primary
-                                    : null,
+                                : node.isFlutterWidget
+                                    ? null
+                                    : Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
@@ -131,7 +131,6 @@ class _PropertyView extends StatelessWidget {
     if (n == null) {
       return const Center(child: Text('Hover a widget to inspect'));
     }
-    final chain = n.pathFromUserAncestor;
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
@@ -148,12 +147,22 @@ class _PropertyView extends StatelessWidget {
           '@ (${n.x.toStringAsFixed(1)}, ${n.y.toStringAsFixed(1)})',
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        if (chain.length > 1) ...[
+        if (n.ancestors.length > 1) ...[
           const SizedBox(height: 4),
           Text(
-            chain.map((c) => c.type).join(' › '),
+            n.ancestors.join(' › '),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontFamily: 'monospace',
+                ),
+          ),
+        ],
+        if (n.nearestWidget != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'nearest: ${n.nearestWidget}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                  color: Theme.of(context).colorScheme.primary,
                 ),
           ),
         ],
@@ -172,12 +181,15 @@ class _PropertyView extends StatelessWidget {
           Text('key: ${n.key}', style: Theme.of(context).textTheme.bodySmall),
         ],
         const Divider(height: 24),
-        if (n.props.isEmpty)
+        if (n.widgetProperties.isEmpty)
           const Text('(no diagnostic properties)')
         else
-          ...n.props.map((p) => Padding(
+          ...n.widgetProperties.entries.map((e) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text(p, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+                child: Text(
+                  '${e.key}: ${e.value}',
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
               )),
       ],
     );

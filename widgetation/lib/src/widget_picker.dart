@@ -5,17 +5,16 @@ import 'tree_builder.dart';
 
 /// Element-tree hit tester for on-device select mode.
 ///
-/// Returns the deepest user widget whose paint rect contains [globalPos].
-/// Uses [TreeBuilder.describeOnly] to produce the typed [TreeNode] so the
-/// caller can read `type`, `rect`, `file`, `line`, etc. without inventing
-/// a parallel data type.
+/// Returns the deepest non-flutter widget whose paint rect contains
+/// [globalPos], with `nearestWidget` and `ancestors` populated so the
+/// caller has enough context to identify the selection in an LLM prompt.
 class WidgetPicker {
   WidgetPicker({TreeBuilder? builder}) : _builder = builder ?? TreeBuilder();
 
   final TreeBuilder _builder;
 
   TreeNode? findAt(Element root, Offset globalPos) {
-    TreeNode? best;
+    Element? bestElement;
     int bestDepth = -1;
 
     void visit(Element element, int depth) {
@@ -28,17 +27,25 @@ class WidgetPicker {
             globalPos.dx <= origin.dx + size.width &&
             globalPos.dy <= origin.dy + size.height;
         if (!inside) return;
-        final node = _builder.describeOnly(element, depth);
-        if (node.isUserWidget && depth > bestDepth) {
-          best = node;
-          bestDepth = depth;
+        // Cheap filter using the same flutter-file test the builder uses
+        // for ancestry. We still describe the node only after it wins,
+        // so non-flutter screening doesn't run on every passed-over
+        // framework element.
+        if (depth > bestDepth) {
+          final node = _builder.describeOnly(element, depth);
+          if (!isFlutterWidgetFile(node.file)) {
+            bestElement = element;
+            bestDepth = depth;
+          }
         }
       }
       element.visitChildren((c) => visit(c, depth + 1));
     }
 
     visit(root, 0);
-    return best;
+    final el = bestElement;
+    if (el == null) return null;
+    return _builder.describeWithAncestry(el, bestDepth);
   }
 
   /// Deepest [Element] (any widget, user-defined or framework) whose render

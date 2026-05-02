@@ -13,24 +13,54 @@ class TreeNode {
   final String type;
   final int depth;
   final Rect rect;
-  final List<String> props;
+  final Map<String, String> widgetProperties;
   final String? key;
-  final bool isUserWidget;
   final String? file;
   final int? line;
+
+  /// Type name of the closest non-flutter ancestor of this node, walking
+  /// upward through the element tree. Falls back to the ancestor's source
+  /// file path if the type is private/anonymous. Null when no non-flutter
+  /// ancestor exists, or when the streamer didn't bother computing it
+  /// (only the picker-selected node carries this).
+  final String? nearestWidget;
+
+  /// Up to 4 widget type names along the ancestor chain, outermost-first,
+  /// with this node's own type as the last entry. Empty when not
+  /// computed (only the picker-selected node carries this).
+  final List<String> ancestors;
+
   final List<TreeNode> children;
 
   const TreeNode({
     required this.type,
     required this.depth,
     required this.rect,
-    required this.props,
+    required this.widgetProperties,
     required this.key,
-    required this.isUserWidget,
     required this.children,
     this.file,
     this.line,
+    this.nearestWidget,
+    this.ancestors = const <String>[],
   });
+
+  TreeNode copyWith({
+    String? nearestWidget,
+    List<String>? ancestors,
+  }) =>
+      TreeNode(
+        type: type,
+        depth: depth,
+        rect: rect,
+        widgetProperties: widgetProperties,
+        key: key,
+        children: children,
+        file: file,
+        line: line,
+        nearestWidget: nearestWidget ?? this.nearestWidget,
+        ancestors: ancestors ?? this.ancestors,
+      );
 
   Map<String, Object?> toJson() => <String, Object?>{
         'type': type,
@@ -39,11 +69,12 @@ class TreeNode {
         'y': rect.y,
         'w': rect.w,
         'h': rect.h,
-        'props': props,
+        'widgetProperties': widgetProperties,
         if (key != null) 'key': key,
-        'isUserWidget': isUserWidget,
         if (file != null) 'file': file,
         if (line != null) 'line': line,
+        if (nearestWidget != null) 'nearestWidget': nearestWidget,
+        if (ancestors.isNotEmpty) 'ancestors': ancestors,
         'children': children.map((c) => c.toJson()).toList(),
       };
 }
