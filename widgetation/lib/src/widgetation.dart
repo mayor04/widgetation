@@ -6,8 +6,10 @@ import 'package:flutter/widgets.dart';
 
 import 'config.dart';
 import 'frame_capturer.dart';
-import 'protocol/tree_node.dart' show TreeNode;
 import 'select_mode_overlay.dart';
+import 'state/hover_store.dart';
+import 'state/selection_store.dart';
+import 'state/widgetation_store.dart';
 import 'streaming_server.dart';
 import 'toolbar/toolbar.dart';
 import 'tree_builder.dart';
@@ -48,9 +50,10 @@ class _WidgetationState extends State<Widgetation> {
   bool _selectActive = false;
   bool _paused = false;
   bool _highlightsVisible = true;
-  TreeNode? _hover;
-  TreeNode? _selected;
   ScrollPosition? _panTarget;
+
+  SelectionStore? _selection;
+  HoverStore? _hover;
 
   @override
   void initState() {
@@ -61,6 +64,8 @@ class _WidgetationState extends State<Widgetation> {
       _boot();
     } else if (cfg.mode == WidgetationMode.edit) {
       _picker = WidgetPicker();
+      _selection = SelectionStore();
+      _hover = HoverStore();
     }
   }
 
@@ -123,6 +128,8 @@ class _WidgetationState extends State<Widgetation> {
     _timer?.cancel();
     _server?.shouldCapture.removeListener(_onShouldCaptureChanged);
     _server?.stop();
+    _selection?.dispose();
+    _hover?.dispose();
     super.dispose();
   }
 
@@ -142,80 +149,93 @@ class _WidgetationState extends State<Widgetation> {
       textDirection: TextDirection.ltr,
       child: MediaQuery.fromView(
         view: View.of(context),
-        child: Stack(
-          children: [
-            // User app. While select mode is active it stops receiving
-            // any pointer events at all — taps don't fire. We forward
-            // pans manually below so scrolling still works.
-            IgnorePointer(ignoring: _selectActive, child: wrapped),
-            if (_selectActive)
-              Positioned.fill(
-                child: MouseRegion(
-                  onHover: (e) => _onHover(e.position),
-                  onExit: (_) => _onHover(null),
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapDown: (d) => _onHover(d.globalPosition),
-                    onTapUp: (d) => _onTapAt(d.globalPosition),
-                    onTapCancel: () => _onHover(null),
-                    onPanDown: _onPanDown,
-                    onPanUpdate: _onPanUpdate,
-                    onPanEnd: _onPanEnd,
-                    onPanCancel: _onPanCancel,
+        child: StoreScope<SelectionStore>(
+          store: _selection!,
+          child: StoreScope<HoverStore>(
+            store: _hover!,
+            child: Stack(
+              children: [
+                // User app. While select mode is active it stops receiving
+                // any pointer events at all — taps don't fire. We forward
+                // pans manually below so scrolling still works.
+                IgnorePointer(ignoring: _selectActive, child: wrapped),
+                if (_selectActive)
+                  Positioned.fill(
+                    child: MouseRegion(
+                      onHover: (e) => _onHover(e.position),
+                      onExit: (_) => _onHover(null),
+                      cursor: SystemMouseCursors.precise,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapDown: (d) => _onHover(d.globalPosition),
+                        onTapUp: (d) => _onTapAt(d.globalPosition),
+                        onTapCancel: () => _onHover(null),
+                        onPanDown: _onPanDown,
+                        onPanUpdate: _onPanUpdate,
+                        onPanEnd: _onPanEnd,
+                        onPanCancel: _onPanCancel,
+                      ),
+                    ),
                   ),
+                if (_selectActive && _highlightsVisible)
+                  const SelectionHighlights(),
+                if (_selectActive && _highlightsVisible)
+                  const SelectionInfoChip(),
+                WidgetationToolbar(
+                  alignment: cfg.selectButtonAlignment,
+                  config: cfg,
+                  selectActive: _selectActive,
+                  paused: _paused,
+                  highlightsVisible: _highlightsVisible,
+                  serverRunning: _server != null,
+                  viewerConnected: _server?.hasViewer ?? false,
+                  onToggleSelect: _toggleSelect,
+                  onTogglePause: _togglePause,
+                  onToggleHighlights: _toggleHighlights,
+                  onCopySelection: _copySelection,
+                  onClearSelection: _clearSelection,
+                  onExpandedChanged: _setSelectActive,
                 ),
-              ),
-            if (_selectActive && _highlightsVisible)
-              SelectionHighlights(hover: _hover, selected: _selected),
-            if (_selectActive && _highlightsVisible && _selected != null)
-              SelectionInfoChip(hit: _selected!),
-            WidgetationToolbar(
-              alignment: cfg.selectButtonAlignment,
-              config: cfg,
-              selectActive: _selectActive,
-              paused: _paused,
-              highlightsVisible: _highlightsVisible,
-              hasSelection: _selected != null,
-              serverRunning: _server != null,
-              viewerConnected: _server?.hasViewer ?? false,
-              onToggleSelect: _toggleSelect,
-              onTogglePause: _togglePause,
-              onToggleHighlights: _toggleHighlights,
-              onCopySelection: _copySelection,
-              onClearSelection: _clearSelection,
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   void _toggleSelect() {
-    setState(() {
-      _selectActive = !_selectActive;
-      if (!_selectActive) {
-        _hover = null;
-        _selected = null;
-      }
-    });
+    setState(() => _selectActive = !_selectActive);
+    if (!_selectActive) {
+      _selection?.clear();
+      _hover?.clear();
+    }
+  }
+
+  void _setSelectActive(bool active) {
+    if (_selectActive == active) return;
+    setState(() => _selectActive = active);
+    if (!active) {
+      _selection?.clear();
+      _hover?.clear();
+    }
   }
 
   void _togglePause() => setState(() => _paused = !_paused);
 
-  void _toggleHighlights() =>
-      setState(() => _highlightsVisible = !_highlightsVisible);
+  void _toggleHighlights() => setState(() => _highlightsVisible = !_highlightsVisible);
 
   void _copySelection() {
-    final s = _selected;
+    final s = _selection?.value.primary;
     if (s == null) return;
     final loc = s.file == null ? s.type : '${s.type} · ${s.file}:${s.line ?? '?'}';
     Clipboard.setData(ClipboardData(text: loc));
   }
 
-  void _clearSelection() => setState(() {
-        _selected = null;
-        _hover = null;
-      });
+  void _clearSelection() {
+    _selection?.clear();
+    _hover?.clear();
+  }
 
   Element? _root() {
     final ctx = _captureKey.currentContext;
@@ -227,22 +247,21 @@ class _WidgetationState extends State<Widgetation> {
     final root = _root();
     if (picker == null || root == null) return;
     final hit = pos == null ? null : picker.findAt(root, pos);
-    if (_sameHit(hit, _hover)) return;
-    setState(() => _hover = hit);
+    _hover?.set(hit, pos);
   }
 
   void _onTapAt(Offset pos) {
     final picker = _picker;
     final root = _root();
     if (picker == null || root == null) return;
-    setState(() => _selected = picker.findAt(root, pos));
-    final s = _selected;
-    if (s != null) {
-      debugPrint('#--> type=${s.type}');
-      debugPrint('     nearest=${s.nearestWidget}');
-      debugPrint('     ancestors=${s.ancestors.join(' › ')}');
-      debugPrint('     file=${s.file}:${s.line}');
-      debugPrint('     props=${s.widgetProperties}');
+    final hit = picker.findAt(root, pos);
+    _selection?.select(hit);
+    if (hit != null) {
+      debugPrint('#--> type=${hit.type}');
+      debugPrint('     nearest=${hit.nearestWidget}');
+      debugPrint('     ancestors=${hit.ancestors.join(' › ')}');
+      debugPrint('     file=${hit.file}:${hit.line}');
+      debugPrint('     props=${hit.widgetProperties}');
     }
   }
 
@@ -264,13 +283,4 @@ class _WidgetationState extends State<Widgetation> {
 
   void _onPanEnd(DragEndDetails d) => _panTarget = null;
   void _onPanCancel() => _panTarget = null;
-
-  bool _sameHit(TreeNode? a, TreeNode? b) {
-    if (a == null || b == null) return a == b;
-    return a.type == b.type &&
-        a.rect.x == b.rect.x &&
-        a.rect.y == b.rect.y &&
-        a.rect.w == b.rect.w &&
-        a.rect.h == b.rect.h;
-  }
 }

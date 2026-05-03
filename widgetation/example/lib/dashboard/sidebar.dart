@@ -12,10 +12,7 @@ class DashboardSidebar extends StatelessWidget {
     return Container(
       width: 240,
       color: AppColors.surfaceSoft,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.lg,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -42,10 +39,7 @@ class _SidebarBrand extends StatelessWidget {
         children: [
           const SpikeMark(size: 16),
           const SizedBox(width: 8),
-          Text(
-            'Claude',
-            style: AppType.titleMd.copyWith(fontWeight: FontWeight.w500),
-          ),
+          Text('Claude', style: AppType.titleMd.copyWith(fontWeight: FontWeight.w500)),
         ],
       ),
     );
@@ -90,10 +84,7 @@ class _WorkspaceChip extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Anthropic', style: AppType.titleSm),
-                Text(
-                  'Team plan',
-                  style: AppType.caption.copyWith(color: AppColors.muted),
-                ),
+                Text('Team plan', style: AppType.caption.copyWith(color: AppColors.muted)),
               ],
             ),
           ),
@@ -129,12 +120,10 @@ class _SidebarNav extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _NavGroupLabel('Workspace'),
-          for (final i in _primary)
-            SidebarNavItem(item: i, active: i.key == activeKey),
+          for (final i in _primary) SidebarNavItem(item: i, active: i.key == activeKey),
           const SizedBox(height: AppSpacing.lg),
           const _NavGroupLabel('Manage'),
-          for (final i in _secondary)
-            SidebarNavItem(item: i, active: i.key == activeKey),
+          for (final i in _secondary) SidebarNavItem(item: i, active: i.key == activeKey),
         ],
       ),
     );
@@ -168,8 +157,7 @@ class SidebarItem {
   final String label;
   final String? badge;
   final bool isNew;
-  const SidebarItem(this.key, this.icon, this.label,
-      {this.badge, this.isNew = false});
+  const SidebarItem(this.key, this.icon, this.label, {this.badge, this.isNew = false});
 }
 
 class SidebarNavItem extends StatelessWidget {
@@ -202,10 +190,7 @@ class SidebarNavItem extends StatelessWidget {
           ),
           if (item.isNew) BadgePill.coral('NEW'),
           if (item.badge != null)
-            Text(
-              item.badge!,
-              style: AppType.caption.copyWith(color: AppColors.muted),
-            ),
+            Text(item.badge!, style: AppType.caption.copyWith(color: AppColors.muted)),
         ],
       ),
     );
@@ -228,15 +213,9 @@ class _SidebarFooter extends StatelessWidget {
           Container(
             width: 32,
             height: 32,
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceDark,
-              shape: BoxShape.circle,
-            ),
+            decoration: const BoxDecoration(color: AppColors.surfaceDark, shape: BoxShape.circle),
             child: Center(
-              child: Text(
-                'M',
-                style: AppType.titleSm.copyWith(color: AppColors.onDark),
-              ),
+              child: Text('M', style: AppType.titleSm.copyWith(color: AppColors.onDark)),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

@@ -1,29 +1,37 @@
 import 'package:flutter/widgets.dart';
 
 import 'protocol/tree_node.dart' show TreeNode;
+import 'state/hover_store.dart';
+import 'state/selection_store.dart';
+import 'state/widgetation_store.dart';
 
 /// Pure-visual highlight layer painted on top of the app while select
 /// mode is active. Does not hit-test (wrapped in [IgnorePointer]) — the
-/// hosting [Widgetation] mounts its own gesture layer separately.
+/// hosting [Widgetation] mounts its own gesture layer separately. Reads
+/// hover and selection from ambient [StoreScope]s.
 class SelectionHighlights extends StatelessWidget {
-  final TreeNode? hover;
-  final TreeNode? selected;
-
-  const SelectionHighlights({
-    super.key,
-    required this.hover,
-    required this.selected,
-  });
+  const SelectionHighlights({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: IgnorePointer(
-        child: CustomPaint(
-          painter: _SelectionPainter(hover: hover, selected: selected),
-          child: const SizedBox.expand(),
-        ),
-      ),
+    return StoreBuilder<SelectionStore, SelectionState>(
+      builder: (context, selection) {
+        return StoreBuilder<HoverStore, HoverState>(
+          builder: (context, hover) {
+            return Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _SelectionPainter(
+                    hover: hover.node,
+                    selected: selection.primary,
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -64,34 +72,58 @@ class _SelectionPainter extends CustomPainter {
       old.hover != hover || old.selected != selected;
 }
 
-/// Tiny label rendered above the selected rect: `type · file:line`.
+/// Tiny label rendered next to the cursor showing the hovered widget's type.
+/// Reads hover state and primary selection from ambient [StoreScope]s; only
+/// paints when there's a hover that isn't the same as the selected node.
 class SelectionInfoChip extends StatelessWidget {
-  final TreeNode hit;
-  const SelectionInfoChip({super.key, required this.hit});
+  const SelectionInfoChip({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final loc = hit.file == null
-        ? hit.type
-        : '${hit.type}  ·  ${hit.file!.split('/').last}:${hit.line ?? '?'}';
-    return Positioned(
-      left: hit.rect.x,
-      top: (hit.rect.y - 24).clamp(0.0, double.infinity),
-      child: IgnorePointer(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: const BoxDecoration(color: Color(0xEE0091EA)),
-          child: Text(
-            loc,
-            style: const TextStyle(
-              color: Color(0xFFFFFFFF),
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-            textDirection: TextDirection.ltr,
-          ),
-        ),
-      ),
+    return StoreBuilder<SelectionStore, SelectionState>(
+      builder: (context, selection) {
+        return StoreBuilder<HoverStore, HoverState>(
+          builder: (context, hover) {
+            final hit = hover.node;
+            if (hit == null || hit == selection.primary) {
+              return const SizedBox.shrink();
+            }
+            final cursor = hover.cursor;
+            final double left;
+            final double top;
+            if (cursor != null) {
+              left = (cursor.dx + 12).clamp(0.0, double.infinity);
+              top = (cursor.dy - 28).clamp(0.0, double.infinity);
+            } else {
+              left = hit.rect.x;
+              top = (hit.rect.y - 24).clamp(0.0, double.infinity);
+            }
+            return Positioned(
+              left: left,
+              top: top,
+              child: IgnorePointer(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xEE111111),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    hit.type,
+                    style: const TextStyle(
+                      color: Color(0xFFFFFFFF),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textDirection: TextDirection.ltr,
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
