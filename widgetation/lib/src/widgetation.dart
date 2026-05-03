@@ -50,7 +50,6 @@ class _WidgetationState extends State<Widgetation> {
 
   WidgetPicker? _picker;
   bool _selectActive = false;
-  bool _paused = false;
   bool _highlightsVisible = true;
   ScrollPosition? _panTarget;
 
@@ -114,7 +113,7 @@ class _WidgetationState extends State<Widgetation> {
   }
 
   Future<void> _tick() async {
-    if (_busy || _paused) return;
+    if (_busy) return;
     if (_server?.hasViewer != true) return;
     _busy = true;
     try {
@@ -192,13 +191,9 @@ class _WidgetationState extends State<Widgetation> {
                 WidgetationToolbar(
                   alignment: cfg.selectButtonAlignment,
                   config: cfg,
-                  selectActive: _selectActive,
-                  paused: _paused,
                   highlightsVisible: _highlightsVisible,
                   serverRunning: _server != null,
                   viewerConnected: _server?.hasViewer ?? false,
-                  onToggleSelect: _toggleSelect,
-                  onTogglePause: _togglePause,
                   onToggleHighlights: _toggleHighlights,
                   onCopySelection: _copySelection,
                   onClearSelection: _clearSelection,
@@ -213,15 +208,6 @@ class _WidgetationState extends State<Widgetation> {
     );
   }
 
-  void _toggleSelect() {
-    setState(() => _selectActive = !_selectActive);
-    if (!_selectActive) {
-      _selection?.clear();
-      _hover?.clear();
-      _edits?.cancelDraft();
-    }
-  }
-
   void _setSelectActive(bool active) {
     if (_selectActive == active) return;
     setState(() => _selectActive = active);
@@ -231,8 +217,6 @@ class _WidgetationState extends State<Widgetation> {
       _edits?.cancelDraft();
     }
   }
-
-  void _togglePause() => setState(() => _paused = !_paused);
 
   void _toggleHighlights() => setState(() => _highlightsVisible = !_highlightsVisible);
 

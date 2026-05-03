@@ -16,15 +16,11 @@ class WidgetationToolbar extends StatefulWidget {
   final WidgetationConfig config;
 
   // Live state from the host widget.
-  final bool selectActive;
-  final bool paused;
   final bool highlightsVisible;
   final bool serverRunning;
   final bool viewerConnected;
 
   // Callbacks.
-  final VoidCallback onToggleSelect;
-  final VoidCallback onTogglePause;
   final VoidCallback onToggleHighlights;
   final VoidCallback onCopySelection;
   final VoidCallback onClearSelection;
@@ -34,13 +30,9 @@ class WidgetationToolbar extends StatefulWidget {
     super.key,
     required this.alignment,
     required this.config,
-    required this.selectActive,
-    required this.paused,
     required this.highlightsVisible,
     required this.serverRunning,
     required this.viewerConnected,
-    required this.onToggleSelect,
-    required this.onTogglePause,
     required this.onToggleHighlights,
     required this.onCopySelection,
     required this.onClearSelection,
@@ -54,7 +46,7 @@ class WidgetationToolbar extends StatefulWidget {
 class _WidgetationToolbarState extends State<WidgetationToolbar>
     with SingleTickerProviderStateMixin {
   static const double _collapsedSize = 44;
-  static const double _expandedWidth = 297;
+  static const double _expandedWidth = 229;
   static const double _expandedHeight = 44;
 
   late final AnimationController _ctrl;
@@ -162,12 +154,8 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
                             ignoring: t < 0.9,
                             child: StoreBuilder<SelectionStore, SelectionState>(
                               builder: (context, selection) => _ControlsRow(
-                                paused: widget.paused,
-                                selectActive: widget.selectActive,
                                 highlightsVisible: widget.highlightsVisible,
                                 hasSelection: selection.hasSelection,
-                                onTogglePause: widget.onTogglePause,
-                                onToggleSelect: widget.onToggleSelect,
                                 onToggleHighlights: widget.onToggleHighlights,
                                 onCopy: widget.onCopySelection,
                                 onClear: widget.onClearSelection,
@@ -191,12 +179,8 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
 }
 
 class _ControlsRow extends StatelessWidget {
-  final bool paused;
-  final bool selectActive;
   final bool highlightsVisible;
   final bool hasSelection;
-  final VoidCallback onTogglePause;
-  final VoidCallback onToggleSelect;
   final VoidCallback onToggleHighlights;
   final VoidCallback onCopy;
   final VoidCallback onClear;
@@ -204,12 +188,8 @@ class _ControlsRow extends StatelessWidget {
   final VoidCallback onClose;
 
   const _ControlsRow({
-    required this.paused,
-    required this.selectActive,
     required this.highlightsVisible,
     required this.hasSelection,
-    required this.onTogglePause,
-    required this.onToggleSelect,
     required this.onToggleHighlights,
     required this.onCopy,
     required this.onClear,
@@ -225,27 +205,17 @@ class _ControlsRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           ToolbarControlButton(
-            icon: ToolbarIcon.pause,
-            active: paused,
-            onTap: onTogglePause,
-          ),
-          ToolbarControlButton(
-            icon: ToolbarIcon.layout,
-            active: selectActive,
-            onTap: onToggleSelect,
-          ),
-          ToolbarControlButton(
-            icon: ToolbarIcon.eye,
-            active: !highlightsVisible,
-            onTap: onToggleHighlights,
-          ),
-          ToolbarControlButton(
             icon: ToolbarIcon.duplicate,
             onTap: hasSelection ? onCopy : null,
           ),
           ToolbarControlButton(
             icon: ToolbarIcon.trash,
             onTap: hasSelection ? onClear : null,
+          ),
+          ToolbarControlButton(
+            icon: ToolbarIcon.eye,
+            active: !highlightsVisible,
+            onTap: onToggleHighlights,
           ),
           ToolbarControlButton(
             icon: ToolbarIcon.settings,
