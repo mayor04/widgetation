@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 /// Set of stroke icons used by the floating toolbar. Hand-ported from the
 /// agentation web bundle so the package ships zero asset weight and zero
 /// extra dependencies. All glyphs render into a 24×24 box.
-enum ToolbarIcon { wand, pause, layout, eye, duplicate, trash, settings, close }
+enum ToolbarIcon { wand, pause, layout, eye, duplicate, trash, settings, close, pencil, plus }
 
 class ToolbarIconPainter extends CustomPainter {
   final ToolbarIcon icon;
@@ -59,6 +59,12 @@ class ToolbarIconPainter extends CustomPainter {
         break;
       case ToolbarIcon.close:
         _close(canvas, stroke);
+        break;
+      case ToolbarIcon.pencil:
+        _pencil(canvas, stroke);
+        break;
+      case ToolbarIcon.plus:
+        _plus(canvas, stroke);
         break;
     }
     canvas.restore();
@@ -187,6 +193,25 @@ class ToolbarIconPainter extends CustomPainter {
   void _close(Canvas canvas, Paint stroke) {
     canvas.drawLine(const Offset(7.0, 7.0), const Offset(17.0, 17.0), stroke);
     canvas.drawLine(const Offset(7.0, 17.0), const Offset(17.0, 7.0), stroke);
+  }
+
+  void _pencil(Canvas canvas, Paint stroke) {
+    // Body of the pencil — diagonal from upper-right tip to lower-left point.
+    final body = Path()
+      ..moveTo(15.5, 4.5)
+      ..lineTo(19.5, 8.5)
+      ..lineTo(8.5, 19.5)
+      ..lineTo(4.5, 19.5)
+      ..lineTo(4.5, 15.5)
+      ..close();
+    canvas.drawPath(body, stroke);
+    // Ferrule line separating eraser/tip from the body.
+    canvas.drawLine(const Offset(13.0, 7.0), const Offset(17.0, 11.0), stroke);
+  }
+
+  void _plus(Canvas canvas, Paint stroke) {
+    canvas.drawLine(const Offset(12.0, 6.0), const Offset(12.0, 18.0), stroke);
+    canvas.drawLine(const Offset(6.0, 12.0), const Offset(18.0, 12.0), stroke);
   }
 
   @override

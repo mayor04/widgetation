@@ -5,8 +5,10 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter/widgets.dart';
 
 import 'config.dart';
+import 'edits/edits_layer.dart';
 import 'frame_capturer.dart';
 import 'select_mode_overlay.dart';
+import 'state/edits_store.dart';
 import 'state/hover_store.dart';
 import 'state/selection_store.dart';
 import 'state/widgetation_store.dart';
@@ -54,6 +56,7 @@ class _WidgetationState extends State<Widgetation> {
 
   SelectionStore? _selection;
   HoverStore? _hover;
+  EditsStore? _edits;
 
   @override
   void initState() {
@@ -66,6 +69,7 @@ class _WidgetationState extends State<Widgetation> {
       _picker = WidgetPicker();
       _selection = SelectionStore();
       _hover = HoverStore();
+      _edits = EditsStore();
     }
   }
 
@@ -130,6 +134,7 @@ class _WidgetationState extends State<Widgetation> {
     _server?.stop();
     _selection?.dispose();
     _hover?.dispose();
+    _edits?.dispose();
     super.dispose();
   }
 
@@ -153,7 +158,9 @@ class _WidgetationState extends State<Widgetation> {
           store: _selection!,
           child: StoreScope<HoverStore>(
             store: _hover!,
-            child: Stack(
+            child: StoreScope<EditsStore>(
+              store: _edits!,
+              child: Stack(
               children: [
                 // User app. While select mode is active it stops receiving
                 // any pointer events at all — taps don't fire. We forward
@@ -181,6 +188,7 @@ class _WidgetationState extends State<Widgetation> {
                   const SelectionHighlights(),
                 if (_selectActive && _highlightsVisible)
                   const SelectionInfoChip(),
+                if (_selectActive) const EditsLayer(),
                 WidgetationToolbar(
                   alignment: cfg.selectButtonAlignment,
                   config: cfg,
@@ -197,6 +205,7 @@ class _WidgetationState extends State<Widgetation> {
                   onExpandedChanged: _setSelectActive,
                 ),
               ],
+              ),
             ),
           ),
         ),
@@ -209,6 +218,7 @@ class _WidgetationState extends State<Widgetation> {
     if (!_selectActive) {
       _selection?.clear();
       _hover?.clear();
+      _edits?.cancelDraft();
     }
   }
 
@@ -218,6 +228,7 @@ class _WidgetationState extends State<Widgetation> {
     if (!active) {
       _selection?.clear();
       _hover?.clear();
+      _edits?.cancelDraft();
     }
   }
 
@@ -233,6 +244,10 @@ class _WidgetationState extends State<Widgetation> {
   }
 
   void _clearSelection() {
+    if (_edits?.value.hasOpenDraft ?? false) {
+      _edits?.shake();
+      return;
+    }
     _selection?.clear();
     _hover?.clear();
   }
@@ -254,9 +269,17 @@ class _WidgetationState extends State<Widgetation> {
     final picker = _picker;
     final root = _root();
     if (picker == null || root == null) return;
+    // While a chat box is open the user can still hover, but tapping a
+    // different widget just nudges the chat box — selection is locked
+    // until they Cancel or Add.
+    if (_edits?.value.hasOpenDraft ?? false) {
+      _edits?.shake();
+      return;
+    }
     final hit = picker.findAt(root, pos);
     _selection?.select(hit);
     if (hit != null) {
+      _edits?.beginCompose(cursor: pos, node: hit);
       debugPrint('#--> type=${hit.type}');
       debugPrint('     nearest=${hit.nearestWidget}');
       debugPrint('     ancestors=${hit.ancestors.join(' › ')}');
