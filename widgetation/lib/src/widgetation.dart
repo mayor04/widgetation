@@ -11,9 +11,12 @@ import 'frame_capturer.dart';
 import 'select_mode_overlay.dart';
 import 'state/edits_store.dart';
 import 'state/hover_store.dart';
+import 'state/preferences_store.dart';
 import 'state/selection_store.dart';
 import 'state/widgetation_store.dart';
 import 'streaming_server.dart';
+import 'theme.dart';
+import 'toolbar/status_popup.dart';
 import 'toolbar/toolbar.dart';
 import 'tree_builder.dart';
 import 'widget_picker.dart';
@@ -51,11 +54,13 @@ class _WidgetationState extends State<Widgetation> {
 
   WidgetPicker? _picker;
   bool _selectActive = false;
+  bool _settingsOpen = false;
   ScrollPosition? _panTarget;
 
   SelectionStore? _selection;
   HoverStore? _hover;
   EditsStore? _edits;
+  PreferencesStore? _prefs;
 
   @override
   void initState() {
@@ -69,6 +74,7 @@ class _WidgetationState extends State<Widgetation> {
       _selection = SelectionStore();
       _hover = HoverStore();
       _edits = EditsStore();
+      _prefs = PreferencesStore()..load();
     }
   }
 
@@ -134,6 +140,7 @@ class _WidgetationState extends State<Widgetation> {
     _selection?.dispose();
     _hover?.dispose();
     _edits?.dispose();
+    _prefs?.dispose();
     super.dispose();
   }
 
@@ -153,50 +160,73 @@ class _WidgetationState extends State<Widgetation> {
       textDirection: TextDirection.ltr,
       child: MediaQuery.fromView(
         view: View.of(context),
-        child: StoreScope<SelectionStore>(
-          store: _selection!,
-          child: StoreScope<HoverStore>(
-            store: _hover!,
-            child: StoreScope<EditsStore>(
-              store: _edits!,
-              child: Stack(
-              children: [
-                // User app. While select mode is active it stops receiving
-                // any pointer events at all — taps don't fire. We forward
-                // pans manually below so scrolling still works.
-                IgnorePointer(ignoring: _selectActive, child: wrapped),
-                if (_selectActive)
-                  Positioned.fill(
-                    child: MouseRegion(
-                      onHover: (e) => _onHover(e.position),
-                      onExit: (_) => _onHover(null),
-                      cursor: SystemMouseCursors.precise,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTapDown: (d) => _onHover(d.globalPosition),
-                        onTapUp: (d) => _onTapAt(d.globalPosition),
-                        onTapCancel: () => _onHover(null),
-                        onPanDown: _onPanDown,
-                        onPanUpdate: _onPanUpdate,
-                        onPanEnd: _onPanEnd,
-                        onPanCancel: _onPanCancel,
+        child: StoreScope<PreferencesStore>(
+          store: _prefs!,
+          child: StoreScope<SelectionStore>(
+            store: _selection!,
+            child: StoreScope<HoverStore>(
+              store: _hover!,
+              child: StoreScope<EditsStore>(
+                store: _edits!,
+                child: StoreBuilder<PreferencesStore, PreferencesState>(
+                  builder: (context, prefs) {
+                    final base = prefs.themeMode == WidgetationThemeMode.light
+                        ? kWidgetationLightTheme
+                        : kWidgetationDarkTheme;
+                    final theme = base.withAccent(prefs.markerColor);
+                    return WidgetationTheme(
+                      data: theme,
+                      child: Stack(
+                        children: [
+                          // User app. While select mode is active it stops
+                          // receiving any pointer events — taps don't fire.
+                          // We forward pans manually below so scrolling
+                          // still works.
+                          IgnorePointer(ignoring: _selectActive, child: wrapped),
+                          if (_selectActive)
+                            Positioned.fill(
+                              child: MouseRegion(
+                                onHover: (e) => _onHover(e.position),
+                                onExit: (_) => _onHover(null),
+                                cursor: SystemMouseCursors.precise,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTapDown: (d) => _onHover(d.globalPosition),
+                                  onTapUp: (d) => _onTapAt(d.globalPosition),
+                                  onTapCancel: () => _onHover(null),
+                                  onPanDown: _onPanDown,
+                                  onPanUpdate: _onPanUpdate,
+                                  onPanEnd: _onPanEnd,
+                                  onPanCancel: _onPanCancel,
+                                ),
+                              ),
+                            ),
+                          if (_selectActive) const SelectionHighlights(),
+                          if (_selectActive) const SelectionInfoChip(),
+                          if (_selectActive) const EditsLayer(),
+                          WidgetationToolbar(
+                            alignment: cfg.selectButtonAlignment,
+                            config: cfg,
+                            serverRunning: _server != null,
+                            viewerConnected: _server?.hasViewer ?? false,
+                            onCopyEdits: _copyAllEdits,
+                            onDeleteEdits: _deleteAllEdits,
+                            onToggleEditsHidden: _toggleEditsHidden,
+                            onToggleSettings: _toggleSettings,
+                            onExpandedChanged: _setSelectActive,
+                          ),
+                          if (_settingsOpen)
+                            ToolbarStatusPopup(
+                              config: cfg,
+                              serverRunning: _server != null,
+                              viewerConnected: _server?.hasViewer ?? false,
+                              onDismiss: _closeSettings,
+                            ),
+                        ],
                       ),
-                    ),
-                  ),
-                if (_selectActive) const SelectionHighlights(),
-                if (_selectActive) const SelectionInfoChip(),
-                if (_selectActive) const EditsLayer(),
-                WidgetationToolbar(
-                  alignment: cfg.selectButtonAlignment,
-                  config: cfg,
-                  serverRunning: _server != null,
-                  viewerConnected: _server?.hasViewer ?? false,
-                  onCopyEdits: _copyAllEdits,
-                  onDeleteEdits: _deleteAllEdits,
-                  onToggleEditsHidden: _toggleEditsHidden,
-                  onExpandedChanged: _setSelectActive,
+                    );
+                  },
                 ),
-              ],
               ),
             ),
           ),
@@ -207,7 +237,10 @@ class _WidgetationState extends State<Widgetation> {
 
   void _setSelectActive(bool active) {
     if (_selectActive == active) return;
-    setState(() => _selectActive = active);
+    setState(() {
+      _selectActive = active;
+      if (!active) _settingsOpen = false;
+    });
     if (!active) {
       _selection?.clear();
       _hover?.clear();
@@ -215,10 +248,28 @@ class _WidgetationState extends State<Widgetation> {
     }
   }
 
+  void _toggleSettings() => setState(() => _settingsOpen = !_settingsOpen);
+
+  void _closeSettings() {
+    if (!_settingsOpen) return;
+    setState(() => _settingsOpen = false);
+  }
+
   void _copyAllEdits() {
     final edits = _edits?.value.edits ?? const [];
     if (edits.isEmpty) return;
     Clipboard.setData(ClipboardData(text: _formatEditsForClipboard(edits)));
+    if (_prefs?.value.clearOnCopy ?? false) {
+      // Don't destroy work if a draft is mid-compose; nudge the chat box
+      // so the user notices instead.
+      if (_edits?.value.hasOpenDraft ?? false) {
+        _edits?.shake();
+      } else {
+        _edits?.clear();
+        _selection?.clear();
+        _hover?.clear();
+      }
+    }
   }
 
   void _deleteAllEdits() => _edits?.clear();

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../state/edits_store.dart';
 import '../state/widgetation_store.dart';
+import '../theme.dart';
 import '../toolbar/toolbar_icons.dart';
 import 'chat_box_position.dart';
 import 'edit_label.dart';
@@ -77,6 +78,7 @@ class _EditChatBoxState extends State<EditChatBox>
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
+    final theme = WidgetationTheme.of(context);
     final pos = chooseChatBoxPosition(
       anchor: widget.draft.cursor,
       box: _boxSize,
@@ -102,11 +104,11 @@ class _EditChatBoxState extends State<EditChatBox>
           height: _boxSize.height,
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
+              color: theme.surface,
               borderRadius: BorderRadius.circular(18),
-              boxShadow: const [
-                BoxShadow(blurRadius: 8, offset: Offset(0, 2), color: Color(0x33000000)),
-                BoxShadow(blurRadius: 16, offset: Offset(0, 4), color: Color(0x1A000000)),
+              boxShadow: [
+                BoxShadow(blurRadius: 8, offset: const Offset(0, 2), color: theme.shadow),
+                BoxShadow(blurRadius: 16, offset: const Offset(0, 4), color: theme.shadow),
               ],
             ),
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
@@ -147,12 +149,13 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final muted = WidgetationTheme.of(context).onSurfaceMuted;
     return Row(
       children: [
-        const Text(
+        Text(
           '›',
           style: TextStyle(
-            color: Color(0xFFB3B3B3),
+            color: muted,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -164,8 +167,8 @@ class _Header extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Color(0xFFB3B3B3),
+            style: TextStyle(
+              color: muted,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -192,11 +195,12 @@ class _TextInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = WidgetationTheme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF222222),
+        color: theme.surfaceMuted,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF0091EA), width: 1.4),
+        border: Border.all(color: theme.accent, width: 1.4),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Stack(
@@ -206,9 +210,9 @@ class _TextInput extends StatelessWidget {
             animation: controller,
             builder: (context, _) {
               if (controller.text.isNotEmpty) return const SizedBox.shrink();
-              return const Text(
+              return Text(
                 'What should change?',
-                style: TextStyle(color: Color(0xFF777777), fontSize: 14),
+                style: TextStyle(color: theme.onSurfaceMuted, fontSize: 14),
                 textDirection: TextDirection.ltr,
               );
             },
@@ -216,9 +220,9 @@ class _TextInput extends StatelessWidget {
           EditableText(
             controller: controller,
             focusNode: focusNode,
-            style: const TextStyle(color: Color(0xFFFFFFFF), fontSize: 14),
-            cursorColor: const Color(0xFFFFFFFF),
-            backgroundCursorColor: const Color(0xFF555555),
+            style: TextStyle(color: theme.onSurface, fontSize: 14),
+            cursorColor: theme.onSurface,
+            backgroundCursorColor: theme.onSurfaceMuted,
             textAlign: TextAlign.start,
             maxLines: 1,
             onChanged: onChanged,
@@ -247,6 +251,7 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = WidgetationTheme.of(context);
     return Row(
       children: [
         if (showDelete)
@@ -259,7 +264,7 @@ class _Footer extends StatelessWidget {
               child: CustomPaint(
                 painter: ToolbarIconPainter(
                   icon: ToolbarIcon.trash,
-                  color: const Color(0xFFB3B3B3),
+                  color: theme.onSurfaceMuted,
                   strokeWidth: 1.6,
                 ),
               ),
@@ -269,11 +274,11 @@ class _Footer extends StatelessWidget {
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onCancel,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 14, fontWeight: FontWeight.w500),
+              style: TextStyle(color: theme.onSurfaceMuted, fontSize: 14, fontWeight: FontWeight.w500),
               textDirection: TextDirection.ltr,
             ),
           ),
@@ -285,13 +290,13 @@ class _Footer extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF0091EA),
+              color: theme.accent,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               primaryLabel,
-              style: const TextStyle(
-                color: Color(0xFFFFFFFF),
+              style: TextStyle(
+                color: theme.onAccent,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),

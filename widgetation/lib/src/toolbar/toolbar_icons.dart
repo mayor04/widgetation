@@ -1,9 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 /// Set of stroke icons used by the floating toolbar. Hand-ported from the
 /// agentation web bundle so the package ships zero asset weight and zero
 /// extra dependencies. All glyphs render into a 24×24 box.
-enum ToolbarIcon { listSparkle, eye, duplicate, trash, settings, close, pencil, plus }
+enum ToolbarIcon { listSparkle, eye, duplicate, trash, settings, close, pencil, plus, sun, moon, help, check }
 
 class ToolbarIconPainter extends CustomPainter {
   final ToolbarIcon icon;
@@ -59,8 +61,74 @@ class ToolbarIconPainter extends CustomPainter {
       case ToolbarIcon.plus:
         _plus(canvas, stroke);
         break;
+      case ToolbarIcon.sun:
+        _sun(canvas, stroke);
+        break;
+      case ToolbarIcon.moon:
+        _moon(canvas, stroke);
+        break;
+      case ToolbarIcon.help:
+        _help(canvas, stroke);
+        break;
+      case ToolbarIcon.check:
+        _check(canvas, stroke);
+        break;
     }
     canvas.restore();
+  }
+
+  void _sun(Canvas canvas, Paint stroke) {
+    canvas.drawCircle(const Offset(12, 12), 4.0, stroke);
+    // 8 rays at 45° intervals.
+    const center = Offset(12, 12);
+    const inner = 6.5;
+    const outer = 9.0;
+    for (int i = 0; i < 8; i++) {
+      final a = i * 3.14159265 / 4;
+      final c = math.cos(a);
+      final s = math.sin(a);
+      canvas.drawLine(
+        Offset(center.dx + inner * c, center.dy + inner * s),
+        Offset(center.dx + outer * c, center.dy + outer * s),
+        stroke,
+      );
+    }
+  }
+
+  void _moon(Canvas canvas, Paint stroke) {
+    // Crescent: large circle minus offset circle, drawn as a single path.
+    final crescent = Path()
+      ..moveTo(19.5, 14.5)
+      ..cubicTo(18.6, 18.0, 15.4, 20.5, 11.7, 20.5)
+      ..cubicTo(7.0, 20.5, 3.5, 17.0, 3.5, 12.3)
+      ..cubicTo(3.5, 8.6, 6.0, 5.4, 9.5, 4.5)
+      ..cubicTo(8.5, 6.5, 8.2, 8.6, 8.7, 10.7)
+      ..cubicTo(9.4, 13.6, 11.4, 15.6, 14.3, 16.3)
+      ..cubicTo(16.4, 16.8, 18.5, 16.5, 19.5, 14.5)
+      ..close();
+    canvas.drawPath(crescent, stroke);
+  }
+
+  void _help(Canvas canvas, Paint stroke) {
+    canvas.drawCircle(const Offset(12, 12), 9.0, stroke);
+    // Question mark hook.
+    final hook = Path()
+      ..moveTo(9.25, 9.5)
+      ..cubicTo(9.25, 8.0, 10.5, 6.75, 12.0, 6.75)
+      ..cubicTo(13.5, 6.75, 14.75, 8.0, 14.75, 9.5)
+      ..cubicTo(14.75, 10.6, 14.0, 11.2, 13.2, 11.7)
+      ..cubicTo(12.4, 12.2, 12.0, 12.7, 12.0, 13.75);
+    canvas.drawPath(hook, stroke);
+    // Dot.
+    canvas.drawLine(const Offset(12.0, 16.5), const Offset(12.0, 16.6), stroke);
+  }
+
+  void _check(Canvas canvas, Paint stroke) {
+    final tick = Path()
+      ..moveTo(5.5, 12.5)
+      ..lineTo(10.0, 17.0)
+      ..lineTo(18.5, 7.5);
+    canvas.drawPath(tick, stroke);
   }
 
   void _listSparkle(Canvas canvas, Paint stroke) {

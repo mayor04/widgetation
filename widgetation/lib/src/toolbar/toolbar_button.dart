@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../theme.dart';
 import 'toolbar_icons.dart';
 
 /// 34×34 round icon button used inside the expanded toolbar pill. Visuals
@@ -29,16 +30,18 @@ class _ToolbarControlButtonState extends State<ToolbarControlButton> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = WidgetationTheme.of(context);
     final disabled = widget.onTap == null;
-    final activeColor = widget.activeColor ?? const Color(0xFF0091EA);
+    final activeColor = widget.activeColor ?? theme.accent;
+    final onSurface = theme.onSurface;
     final fg = disabled
-        ? const Color(0x66FFFFFF)
+        ? onSurface.withAlpha(102)
         : widget.active
             ? activeColor
-            : (_hover ? const Color(0xFFFFFFFF) : const Color(0xD9FFFFFF));
+            : (_hover ? onSurface : onSurface.withAlpha(217));
     final bg = widget.active
         ? activeColor.withAlpha(40)
-        : (_hover && !disabled ? const Color(0x1FFFFFFF) : const Color(0x00000000));
+        : (_hover && !disabled ? onSurface.withAlpha(31) : const Color(0x00000000));
 
     return MouseRegion(
       cursor: disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
@@ -77,7 +80,7 @@ class ToolbarDivider extends StatelessWidget {
       width: 1,
       height: 16,
       margin: const EdgeInsets.symmetric(horizontal: 2),
-      color: const Color(0x33FFFFFF),
+      color: WidgetationTheme.of(context).divider,
     );
   }
 }

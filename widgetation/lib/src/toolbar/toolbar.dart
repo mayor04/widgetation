@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../config.dart';
 import '../state/edits_store.dart';
 import '../state/widgetation_store.dart';
-import 'status_popup.dart';
+import '../theme.dart';
 import 'toolbar_button.dart';
 import 'toolbar_icons.dart';
 
@@ -23,6 +23,7 @@ class WidgetationToolbar extends StatefulWidget {
   final VoidCallback onCopyEdits;
   final VoidCallback onDeleteEdits;
   final VoidCallback onToggleEditsHidden;
+  final VoidCallback onToggleSettings;
   final ValueChanged<bool> onExpandedChanged;
 
   const WidgetationToolbar({
@@ -34,6 +35,7 @@ class WidgetationToolbar extends StatefulWidget {
     required this.onCopyEdits,
     required this.onDeleteEdits,
     required this.onToggleEditsHidden,
+    required this.onToggleSettings,
     required this.onExpandedChanged,
   });
 
@@ -49,7 +51,6 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
 
   late final AnimationController _ctrl;
   late final Animation<double> _t;
-  final OverlayPortalController _popup = OverlayPortalController();
 
   @override
   void initState() {
@@ -73,17 +74,8 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
   }
 
   void _collapse() {
-    if (_popup.isShowing) _popup.hide();
     _ctrl.reverse();
     widget.onExpandedChanged(false);
-  }
-
-  void _toggleSettings() {
-    if (_popup.isShowing) {
-      _popup.hide();
-    } else {
-      _popup.show();
-    }
   }
 
   @override
@@ -97,25 +89,18 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
             animation: _t,
             builder: (context, _) {
               final t = _t.value;
+              final theme = WidgetationTheme.of(context);
               final width = _collapsedSize + (_expandedWidth - _collapsedSize) * t;
               final radius = _collapsedSize / 2;
-              return OverlayPortal(
-                controller: _popup,
-                overlayChildBuilder: (ctx) => ToolbarStatusPopup(
-                  config: widget.config,
-                  serverRunning: widget.serverRunning,
-                  viewerConnected: widget.viewerConnected,
-                  onDismiss: _popup.hide,
-                ),
-                child: Container(
+              return Container(
                   width: width,
                   height: _expandedHeight,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
+                    color: theme.surface,
                     borderRadius: BorderRadius.circular(radius),
-                    boxShadow: const [
-                      BoxShadow(blurRadius: 8, offset: Offset(0, 2), color: Color(0x33000000)),
-                      BoxShadow(blurRadius: 16, offset: Offset(0, 4), color: Color(0x1A000000)),
+                    boxShadow: [
+                      BoxShadow(blurRadius: 8, offset: const Offset(0, 2), color: theme.shadow),
+                      BoxShadow(blurRadius: 16, offset: const Offset(0, 4), color: theme.shadow),
                     ],
                   ),
                   child: ClipRRect(
@@ -137,7 +122,7 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
                                 child: CustomPaint(
                                   painter: ToolbarIconPainter(
                                     icon: ToolbarIcon.listSparkle,
-                                    color: const Color(0xFFFFFFFF),
+                                    color: theme.onSurface,
                                     strokeWidth: 1.5,
                                   ),
                                 ),
@@ -157,7 +142,7 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
                                 onToggleHidden: widget.onToggleEditsHidden,
                                 onCopy: widget.onCopyEdits,
                                 onDelete: widget.onDeleteEdits,
-                                onSettings: _toggleSettings,
+                                onSettings: widget.onToggleSettings,
                                 onClose: _collapse,
                               ),
                             ),
@@ -166,8 +151,7 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
                       ],
                     ),
                   ),
-                ),
-              );
+                );
             },
           ),
         ),

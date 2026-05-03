@@ -4,6 +4,7 @@ import 'protocol/tree_node.dart' show TreeNode;
 import 'state/hover_store.dart';
 import 'state/selection_store.dart';
 import 'state/widgetation_store.dart';
+import 'theme.dart';
 
 /// Pure-visual highlight layer painted on top of the app while select
 /// mode is active. Does not hit-test (wrapped in [IgnorePointer]) — the
@@ -14,6 +15,7 @@ class SelectionHighlights extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = WidgetationTheme.of(context).accent;
     return StoreBuilder<SelectionStore, SelectionState>(
       builder: (context, selection) {
         return StoreBuilder<HoverStore, HoverState>(
@@ -24,6 +26,7 @@ class SelectionHighlights extends StatelessWidget {
                   painter: _SelectionPainter(
                     hover: hover.node,
                     selected: selection.primary,
+                    accent: accent,
                   ),
                   child: const SizedBox.expand(),
                 ),
@@ -39,7 +42,8 @@ class SelectionHighlights extends StatelessWidget {
 class _SelectionPainter extends CustomPainter {
   final TreeNode? hover;
   final TreeNode? selected;
-  _SelectionPainter({required this.hover, required this.selected});
+  final Color accent;
+  _SelectionPainter({required this.hover, required this.selected, required this.accent});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -48,18 +52,18 @@ class _SelectionPainter extends CustomPainter {
       final p = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
-        ..color = const Color(0x8833B5FF);
+        ..color = accent.withAlpha(0x88);
       canvas.drawRect(r, p);
     }
     if (selected != null) {
       final r = _toRect(selected!);
-      canvas.drawRect(r, Paint()..color = const Color(0x2233B5FF));
+      canvas.drawRect(r, Paint()..color = accent.withAlpha(0x22));
       canvas.drawRect(
         r,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2
-          ..color = const Color(0xFF0091EA),
+          ..color = accent,
       );
     }
   }
@@ -69,7 +73,7 @@ class _SelectionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SelectionPainter old) =>
-      old.hover != hover || old.selected != selected;
+      old.hover != hover || old.selected != selected || old.accent != accent;
 }
 
 /// Tiny label rendered next to the cursor showing the hovered widget's type.
@@ -98,6 +102,7 @@ class SelectionInfoChip extends StatelessWidget {
               left = hit.rect.x;
               top = (hit.rect.y - 24).clamp(0.0, double.infinity);
             }
+            final theme = WidgetationTheme.of(context);
             return Positioned(
               left: left,
               top: top,
@@ -106,7 +111,7 @@ class SelectionInfoChip extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xEE111111),
+                    color: theme.surfaceElevated,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(

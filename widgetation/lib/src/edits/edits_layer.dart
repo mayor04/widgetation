@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../state/edits_store.dart';
 import '../state/widgetation_store.dart';
+import '../theme.dart';
 import '../toolbar/toolbar_icons.dart';
 import 'edit_chat_box.dart';
 import 'edit_index_bubble.dart';
@@ -51,6 +52,7 @@ class _DraftPlusBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = WidgetationTheme.of(context);
     return Positioned(
       left: cursor.dx - _size / 2,
       top: cursor.dy - _size / 2,
@@ -58,17 +60,17 @@ class _DraftPlusBubble extends StatelessWidget {
         child: Container(
           width: _size,
           height: _size,
-          decoration: const BoxDecoration(
-            color: Color(0xFF0091EA),
+          decoration: BoxDecoration(
+            color: theme.accent,
             shape: BoxShape.circle,
             boxShadow: [
-              BoxShadow(blurRadius: 6, offset: Offset(0, 2), color: Color(0x33000000)),
+              BoxShadow(blurRadius: 6, offset: const Offset(0, 2), color: theme.shadow),
             ],
           ),
           child: CustomPaint(
             painter: ToolbarIconPainter(
               icon: ToolbarIcon.plus,
-              color: const Color(0xFFFFFFFF),
+              color: theme.onAccent,
               strokeWidth: 2.0,
             ),
           ),

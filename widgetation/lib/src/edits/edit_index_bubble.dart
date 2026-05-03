@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../state/edits_store.dart';
 import '../state/widgetation_store.dart';
+import '../theme.dart';
 import '../toolbar/toolbar_icons.dart';
 import 'edit_label.dart';
 
@@ -68,12 +69,13 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = WidgetationTheme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0091EA),
+        color: theme.accent,
         shape: BoxShape.circle,
-        boxShadow: const [
-          BoxShadow(blurRadius: 6, offset: Offset(0, 2), color: Color(0x33000000)),
+        boxShadow: [
+          BoxShadow(blurRadius: 6, offset: const Offset(0, 2), color: theme.shadow),
         ],
       ),
       alignment: Alignment.center,
@@ -84,15 +86,15 @@ class _Bubble extends StatelessWidget {
               child: CustomPaint(
                 painter: ToolbarIconPainter(
                   icon: ToolbarIcon.pencil,
-                  color: const Color(0xFFFFFFFF),
+                  color: theme.onAccent,
                   strokeWidth: 1.8,
                 ),
               ),
             )
           : Text(
               '$number',
-              style: const TextStyle(
-                color: Color(0xFFFFFFFF),
+              style: TextStyle(
+                color: theme.onAccent,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
@@ -109,16 +111,23 @@ class _HoverPopover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = WidgetationTheme.of(context);
     final label = edit.nodes.isEmpty ? '' : formatNodeLabel(edit.nodes.first);
+    final fg = theme.brightness == Brightness.dark
+        ? const Color(0xFFFFFFFF)
+        : const Color(0xFFFFFFFF);
+    final fgMuted = theme.brightness == Brightness.dark
+        ? const Color(0xFFB3B3B3)
+        : const Color(0xFFD4D4D8);
     return IgnorePointer(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 260),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xEE111111),
+          color: theme.surfaceElevated,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: const [
-            BoxShadow(blurRadius: 8, offset: Offset(0, 2), color: Color(0x33000000)),
+          boxShadow: [
+            BoxShadow(blurRadius: 8, offset: const Offset(0, 2), color: theme.shadow),
           ],
         ),
         child: Column(
@@ -128,8 +137,8 @@ class _HoverPopover extends StatelessWidget {
             if (label.isNotEmpty)
               Text(
                 label,
-                style: const TextStyle(
-                  color: Color(0xFFB3B3B3),
+                style: TextStyle(
+                  color: fgMuted,
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
                 ),
@@ -138,8 +147,8 @@ class _HoverPopover extends StatelessWidget {
             if (label.isNotEmpty) const SizedBox(height: 4),
             Text(
               edit.text,
-              style: const TextStyle(
-                color: Color(0xFFFFFFFF),
+              style: TextStyle(
+                color: fg,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
