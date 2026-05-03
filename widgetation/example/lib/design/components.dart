@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'tokens.dart';
 
-/// 4-spoke radial spike — the Anthropic brand mark stand-in.
+/// 4-spoke radial spike — the Ochestra brand mark.
 class SpikeMark extends StatelessWidget {
   final double size;
   final Color color;

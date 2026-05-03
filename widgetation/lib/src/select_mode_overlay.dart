@@ -2,56 +2,6 @@ import 'package:flutter/widgets.dart';
 
 import 'protocol/tree_node.dart' show TreeNode;
 
-/// Floating "enter / exit select mode" button. Pure widgets-layer (no
-/// Material dependency) so the package stays framework-agnostic.
-class SelectModeButton extends StatelessWidget {
-  final bool active;
-  final VoidCallback onTap;
-  final AlignmentGeometry alignment;
-
-  const SelectModeButton({
-    super.key,
-    required this.active,
-    required this.onTap,
-    required this.alignment,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Align(
-        alignment: alignment,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: GestureDetector(
-            onTap: onTap,
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: active
-                    ? const Color(0xFF0091EA)
-                    : const Color(0xCC202020),
-                shape: BoxShape.circle,
-                boxShadow: const [
-                  BoxShadow(blurRadius: 6, color: Color(0x55000000)),
-                ],
-              ),
-              child: const Center(
-                child: Text(
-                  '◎',
-                  style: TextStyle(color: Color(0xFFFFFFFF), fontSize: 22),
-                  textDirection: TextDirection.ltr,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Pure-visual highlight layer painted on top of the app while select
 /// mode is active. Does not hit-test (wrapped in [IgnorePointer]) — the
 /// hosting [Widgetation] mounts its own gesture layer separately.

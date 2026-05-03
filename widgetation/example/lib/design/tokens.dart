@@ -1,34 +1,34 @@
 import 'package:flutter/material.dart';
 
-/// Claude.com design tokens — cream + coral + dark navy.
+/// Ochestra design tokens — blue + white + deep navy.
 class AppColors {
   // Brand
-  static const primary = Color(0xFFCC785C);
-  static const primaryActive = Color(0xFFA9583E);
-  static const primaryDisabled = Color(0xFFE6DFD8);
+  static const primary = Color(0xFF6AC1EA);
+  static const primaryActive = Color(0xFF4DA8D2);
+  static const primaryDisabled = Color(0xFFD1E7F2);
   static const accentTeal = Color(0xFF5DB8A6);
   static const accentAmber = Color(0xFFE8A55A);
 
-  // Surfaces
-  static const canvas = Color(0xFFFAF9F5);
-  static const surfaceSoft = Color(0xFFF5F0E8);
-  static const surfaceCard = Color(0xFFEFE9DE);
-  static const surfaceCreamStrong = Color(0xFFE8E0D2);
-  static const surfaceDark = Color(0xFF181715);
-  static const surfaceDarkElevated = Color(0xFF252320);
-  static const surfaceDarkSoft = Color(0xFF1F1E1B);
-  static const hairline = Color(0xFFE6DFD8);
-  static const hairlineSoft = Color(0xFFEBE6DF);
+  // Surfaces — white canvas with cool blue tints
+  static const canvas = Color(0xFFFFFFFF);
+  static const surfaceSoft = Color(0xFFF5F8FB);
+  static const surfaceCard = Color(0xFFEAF2F8);
+  static const surfaceStrong = Color(0xFFDCE9F2);
+  static const surfaceDark = Color(0xFF0F1B2D);
+  static const surfaceDarkElevated = Color(0xFF1A2638);
+  static const surfaceDarkSoft = Color(0xFF15212F);
+  static const hairline = Color(0xFFE1E8EE);
+  static const hairlineSoft = Color(0xFFEEF2F6);
 
   // Text
-  static const ink = Color(0xFF141413);
-  static const bodyStrong = Color(0xFF252523);
-  static const body = Color(0xFF3D3D3A);
-  static const muted = Color(0xFF6C6A64);
-  static const mutedSoft = Color(0xFF8E8B82);
+  static const ink = Color(0xFF0F1B2D);
+  static const bodyStrong = Color(0xFF1E2B3D);
+  static const body = Color(0xFF3A4658);
+  static const muted = Color(0xFF6B7585);
+  static const mutedSoft = Color(0xFF8E96A4);
   static const onPrimary = Color(0xFFFFFFFF);
-  static const onDark = Color(0xFFFAF9F5);
-  static const onDarkSoft = Color(0xFFA09D96);
+  static const onDark = Color(0xFFFFFFFF);
+  static const onDarkSoft = Color(0xFF98A2B0);
 
   // Semantic
   static const success = Color(0xFF5DB872);
@@ -36,11 +36,11 @@ class AppColors {
   static const error = Color(0xFFC64545);
 
   // Syntax (for the dark code mockup)
-  static const codeKeyword = Color(0xFFCC785C);
+  static const codeKeyword = Color(0xFF6AC1EA);
   static const codeString = Color(0xFFE8A55A);
   static const codeFunction = Color(0xFF5DB8A6);
-  static const codeComment = Color(0xFF6C6A64);
-  static const codeText = Color(0xFFD9D5CC);
+  static const codeComment = Color(0xFF6B7585);
+  static const codeText = Color(0xFFD9DCE2);
 }
 
 class AppSpacing {

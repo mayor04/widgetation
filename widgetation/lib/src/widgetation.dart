@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter/widgets.dart';
 
 import 'config.dart';
@@ -8,6 +9,7 @@ import 'frame_capturer.dart';
 import 'protocol/tree_node.dart' show TreeNode;
 import 'select_mode_overlay.dart';
 import 'streaming_server.dart';
+import 'toolbar/toolbar.dart';
 import 'tree_builder.dart';
 import 'widget_picker.dart';
 
@@ -44,6 +46,8 @@ class _WidgetationState extends State<Widgetation> {
 
   WidgetPicker? _picker;
   bool _selectActive = false;
+  bool _paused = false;
+  bool _highlightsVisible = true;
   TreeNode? _hover;
   TreeNode? _selected;
   ScrollPosition? _panTarget;
@@ -101,7 +105,7 @@ class _WidgetationState extends State<Widgetation> {
   }
 
   Future<void> _tick() async {
-    if (_busy) return;
+    if (_busy || _paused) return;
     if (_server?.hasViewer != true) return;
     _busy = true;
     try {
@@ -161,12 +165,24 @@ class _WidgetationState extends State<Widgetation> {
                   ),
                 ),
               ),
-            if (_selectActive) SelectionHighlights(hover: _hover, selected: _selected),
-            if (_selectActive && _selected != null) SelectionInfoChip(hit: _selected!),
-            SelectModeButton(
-              active: _selectActive,
+            if (_selectActive && _highlightsVisible)
+              SelectionHighlights(hover: _hover, selected: _selected),
+            if (_selectActive && _highlightsVisible && _selected != null)
+              SelectionInfoChip(hit: _selected!),
+            WidgetationToolbar(
               alignment: cfg.selectButtonAlignment,
-              onTap: _toggleSelect,
+              config: cfg,
+              selectActive: _selectActive,
+              paused: _paused,
+              highlightsVisible: _highlightsVisible,
+              hasSelection: _selected != null,
+              serverRunning: _server != null,
+              viewerConnected: _server?.hasViewer ?? false,
+              onToggleSelect: _toggleSelect,
+              onTogglePause: _togglePause,
+              onToggleHighlights: _toggleHighlights,
+              onCopySelection: _copySelection,
+              onClearSelection: _clearSelection,
             ),
           ],
         ),
@@ -183,6 +199,23 @@ class _WidgetationState extends State<Widgetation> {
       }
     });
   }
+
+  void _togglePause() => setState(() => _paused = !_paused);
+
+  void _toggleHighlights() =>
+      setState(() => _highlightsVisible = !_highlightsVisible);
+
+  void _copySelection() {
+    final s = _selected;
+    if (s == null) return;
+    final loc = s.file == null ? s.type : '${s.type} · ${s.file}:${s.line ?? '?'}';
+    Clipboard.setData(ClipboardData(text: loc));
+  }
+
+  void _clearSelection() => setState(() {
+        _selected = null;
+        _hover = null;
+      });
 
   Element? _root() {
     final ctx = _captureKey.currentContext;
