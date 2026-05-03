@@ -55,7 +55,8 @@ class _WidgetationState extends State<Widgetation> {
   WidgetPicker? _picker;
   bool _selectActive = false;
   bool _settingsOpen = false;
-  ScrollPosition? _panTarget;
+  Offset? _marqueeStart;
+  Offset? _marqueeCurrent;
 
   SelectionStore? _selection;
   HoverStore? _hover;
@@ -179,9 +180,10 @@ class _WidgetationState extends State<Widgetation> {
                       child: Stack(
                         children: [
                           // User app. While select mode is active it stops
-                          // receiving any pointer events — taps don't fire.
-                          // We forward pans manually below so scrolling
-                          // still works.
+                          // receiving any pointer events — taps and pans
+                          // are claimed by our overlay so the inspector
+                          // can pick widgets and draw a marquee instead
+                          // of forwarding to the underlying scrollables.
                           IgnorePointer(ignoring: _selectActive, child: wrapped),
                           if (_selectActive)
                             Positioned.fill(
@@ -194,10 +196,18 @@ class _WidgetationState extends State<Widgetation> {
                                   onTapDown: (d) => _onHover(d.globalPosition),
                                   onTapUp: (d) => _onTapAt(d.globalPosition),
                                   onTapCancel: () => _onHover(null),
-                                  onPanDown: _onPanDown,
+                                  onPanStart: _onPanStart,
                                   onPanUpdate: _onPanUpdate,
                                   onPanEnd: _onPanEnd,
                                   onPanCancel: _onPanCancel,
+                                ),
+                              ),
+                            ),
+                          if (_selectActive && _marqueeRect != null)
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                child: CustomPaint(
+                                  painter: _MarqueePainter(_marqueeRect!),
                                 ),
                               ),
                             ),
@@ -312,37 +322,120 @@ class _WidgetationState extends State<Widgetation> {
     }
   }
 
-  void _onPanDown(DragDownDetails d) {
-    final picker = _picker;
-    final root = _root();
-    if (picker == null || root == null) return;
-    final el = picker.elementAt(root, d.globalPosition);
-    _panTarget = el == null ? null : Scrollable.maybeOf(el)?.position;
+  Rect? get _marqueeRect {
+    final a = _marqueeStart;
+    final b = _marqueeCurrent;
+    if (a == null || b == null) return null;
+    return Rect.fromPoints(a, b);
+  }
+
+  void _onPanStart(DragStartDetails d) {
+    // Mid-draft pan should nudge the chat box, not start a new marquee.
+    if (_edits?.value.hasOpenDraft ?? false) {
+      _edits?.shake();
+      return;
+    }
+    setState(() {
+      _marqueeStart = d.globalPosition;
+      _marqueeCurrent = d.globalPosition;
+    });
+    _hover?.clear();
   }
 
   void _onPanUpdate(DragUpdateDetails d) {
-    final pos = _panTarget;
-    if (pos == null) return;
-    final delta = pos.axis == Axis.vertical ? d.delta.dy : d.delta.dx;
-    final next = (pos.pixels - delta).clamp(pos.minScrollExtent, pos.maxScrollExtent);
-    pos.jumpTo(next);
+    if (_marqueeStart == null) return;
+    setState(() => _marqueeCurrent = d.globalPosition);
   }
 
-  void _onPanEnd(DragEndDetails d) => _panTarget = null;
-  void _onPanCancel() => _panTarget = null;
+  void _onPanEnd(DragEndDetails d) {
+    final start = _marqueeStart;
+    final end = _marqueeCurrent;
+    setState(() {
+      _marqueeStart = null;
+      _marqueeCurrent = null;
+    });
+    if (start == null || end == null) return;
+    _finishMarquee(Rect.fromPoints(start, end), end);
+  }
+
+  void _onPanCancel() {
+    if (_marqueeStart == null) return;
+    setState(() {
+      _marqueeStart = null;
+      _marqueeCurrent = null;
+    });
+  }
+
+  void _finishMarquee(Rect marquee, Offset end) {
+    final picker = _picker;
+    final root = _root();
+    if (picker == null || root == null) return;
+    // Treat sub-slop drags as a no-op; the GestureDetector's tap path
+    // should have fired instead.
+    if (marquee.width < 4 && marquee.height < 4) return;
+
+    final hits = picker.findAllIn(root, marquee);
+    if (hits.isEmpty) return;
+
+    Rect? union;
+    for (final n in hits) {
+      final r = Rect.fromLTWH(n.rect.x, n.rect.y, n.rect.w, n.rect.h);
+      union = union == null ? r : union.expandToInclude(r);
+    }
+    if (union == null) return;
+
+    _selection?.selectMany(hits);
+    _edits?.beginComposeMulti(cursor: end, nodes: hits, selectRect: union);
+  }
+}
+
+class _MarqueePainter extends CustomPainter {
+  static const Color _green = Color(0xFF00C853);
+  static const Color _greenFill = Color(0x3300C853);
+
+  final Rect rect;
+  _MarqueePainter(this.rect);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(rect, Paint()..color = _greenFill);
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = _green,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _MarqueePainter old) => old.rect != rect;
 }
 
 String _formatEditsForClipboard(List<Edit> edits) {
   final sb = StringBuffer('### **Page Feedback List**\n\n');
   for (final edit in edits) {
-    final node = edit.nodes.isEmpty ? null : edit.nodes.first;
-    final label = node == null ? '(unknown)' : formatNodeLabel(node);
-    final file = edit.files.isNotEmpty ? edit.files.first : null;
-    final source = file == null ? '(unknown)' : '$file:${node?.line ?? '?'}';
+    final label = edit.nodes.isEmpty
+        ? '(unknown)'
+        : formatMultiNodeLabel(edit.nodes);
+    final source = _formatEditSources(edit);
     sb.writeln('${edit.index}. $label');
     sb.writeln('Source: $source');
     sb.writeln('Feedback: ${edit.text}');
     sb.writeln();
   }
   return sb.toString().trimRight();
+}
+
+String _formatEditSources(Edit edit) {
+  if (edit.nodes.isEmpty) return '(unknown)';
+  final parts = <String>{};
+  for (var i = 0; i < edit.nodes.length; i++) {
+    final node = edit.nodes[i];
+    final file = i < edit.files.length ? edit.files[i] : node.file;
+    if (file == null) continue;
+    parts.add('$file:${node.line ?? '?'}');
+  }
+  if (parts.isEmpty) return '(unknown)';
+  return parts.join(', ');
 }

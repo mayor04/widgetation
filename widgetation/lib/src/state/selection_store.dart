@@ -27,6 +27,18 @@ class SelectionStore extends WidgetationStore<SelectionState> {
         : SelectionState(nodes: [node], active: node));
   }
 
+  /// Replace the selection with [nodes]. Empty list clears.
+  void selectMany(List<TreeNode> nodes) {
+    if (nodes.isEmpty) {
+      emit(SelectionState.empty);
+      return;
+    }
+    emit(SelectionState(
+      nodes: List.unmodifiable(nodes),
+      active: nodes.first,
+    ));
+  }
+
   /// Add to the selection (multi-select; future use). No-op if [node] is
   /// already selected. The added node becomes [SelectionState.active].
   void add(TreeNode node) {

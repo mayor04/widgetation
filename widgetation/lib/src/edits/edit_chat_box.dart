@@ -27,7 +27,7 @@ class EditChatBox extends StatefulWidget {
 
 class _EditChatBoxState extends State<EditChatBox>
     with TickerProviderStateMixin {
-  static const Size _boxSize = Size(360, 168);
+  static const Size _boxSize = Size(288, 116);
 
   late final TextEditingController _ctrl;
   late final FocusNode _focus;
@@ -85,8 +85,7 @@ class _EditChatBoxState extends State<EditChatBox>
       screen: media.size,
       insets: media.padding + const EdgeInsets.all(8),
     );
-    final node = widget.draft.nodes.first;
-    final label = formatNodeLabel(node);
+    final label = formatMultiNodeLabel(widget.draft.nodes);
 
     return Positioned(
       left: pos.dx,

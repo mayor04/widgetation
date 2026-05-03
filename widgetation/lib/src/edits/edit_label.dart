@@ -13,6 +13,15 @@ String formatNodeLabel(TreeNode node) {
   return '${node.type} ($trimmed)';
 }
 
+/// Heading text when a draft covers multiple nodes from a marquee
+/// selection. Single-node case delegates to [formatNodeLabel] so behaviour
+/// stays identical for tap selections.
+String formatMultiNodeLabel(List<TreeNode> nodes) {
+  if (nodes.isEmpty) return '';
+  if (nodes.length == 1) return formatNodeLabel(nodes.first);
+  return '${formatNodeLabel(nodes.first)} +${nodes.length - 1}';
+}
+
 String? _extractText(TreeNode node) {
   for (final key in const ['data', 'text', 'label', 'title']) {
     final v = node.widgetProperties[key];

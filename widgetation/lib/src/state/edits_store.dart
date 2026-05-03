@@ -120,6 +120,31 @@ class EditsStore extends WidgetationStore<EditsState> {
     ));
   }
 
+  /// Open a fresh draft for a multi-node marquee selection anchored at
+  /// [cursor] (typically the drag-end position). [selectRect] is the union
+  /// of all node rects, used as the post-commit selection visual.
+  void beginComposeMulti({
+    required Offset cursor,
+    required List<TreeNode> nodes,
+    required Rect selectRect,
+  }) {
+    if (value.draft != null) return;
+    if (nodes.isEmpty) return;
+    final first = nodes.first;
+    emit(EditsState(
+      edits: value.edits,
+      hidden: value.hidden,
+      draft: EditDraft(
+        cursor: cursor,
+        nodes: List.unmodifiable(nodes),
+        text: '',
+        files: [for (final n in nodes) n.file],
+        selectRect: selectRect,
+        ancestors: first.ancestors.isEmpty ? null : List.unmodifiable(first.ancestors),
+      ),
+    ));
+  }
+
   void updateDraftText(String text) {
     final d = value.draft;
     if (d == null) return;

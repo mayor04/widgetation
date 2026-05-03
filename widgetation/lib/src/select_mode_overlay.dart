@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'protocol/tree_node.dart' show TreeNode;
+import 'state/edits_store.dart';
 import 'state/hover_store.dart';
 import 'state/selection_store.dart';
 import 'state/widgetation_store.dart';
@@ -9,7 +10,8 @@ import 'theme.dart';
 /// Pure-visual highlight layer painted on top of the app while select
 /// mode is active. Does not hit-test (wrapped in [IgnorePointer]) — the
 /// hosting [Widgetation] mounts its own gesture layer separately. Reads
-/// hover and selection from ambient [StoreScope]s.
+/// hover, selection, and the active draft (for marquee union rects) from
+/// ambient [StoreScope]s.
 class SelectionHighlights extends StatelessWidget {
   const SelectionHighlights({super.key});
 
@@ -20,30 +22,57 @@ class SelectionHighlights extends StatelessWidget {
       builder: (context, selection) {
         return StoreBuilder<HoverStore, HoverState>(
           builder: (context, hover) {
-            return Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _SelectionPainter(
-                    hover: hover.node,
-                    selected: selection.primary,
-                    accent: accent,
+            return StoreBuilder<EditsStore, EditsState>(
+              builder: (context, edits) {
+                return Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: _SelectionPainter(
+                        hover: hover.node,
+                        selected: selection.primary,
+                        unionRect: _resolveUnionRect(edits, selection),
+                        accent: accent,
+                      ),
+                      child: const SizedBox.expand(),
+                    ),
                   ),
-                  child: const SizedBox.expand(),
-                ),
-              ),
+                );
+              },
             );
           },
         );
       },
     );
   }
+
+  // Prefer the draft's selectRect (only set on multi-node marquees and
+  // restored when re-opening a multi-node edit). Fall back to a computed
+  // union when SelectionStore holds multiple nodes but no draft is open
+  // (e.g. just after committing a marquee edit).
+  static Rect? _resolveUnionRect(EditsState edits, SelectionState selection) {
+    final fromDraft = edits.draft?.selectRect;
+    if (fromDraft != null) return fromDraft;
+    if (selection.nodes.length < 2) return null;
+    Rect? acc;
+    for (final n in selection.nodes) {
+      final r = Rect.fromLTWH(n.rect.x, n.rect.y, n.rect.w, n.rect.h);
+      acc = acc == null ? r : acc.expandToInclude(r);
+    }
+    return acc;
+  }
 }
 
 class _SelectionPainter extends CustomPainter {
   final TreeNode? hover;
   final TreeNode? selected;
+  final Rect? unionRect;
   final Color accent;
-  _SelectionPainter({required this.hover, required this.selected, required this.accent});
+  _SelectionPainter({
+    required this.hover,
+    required this.selected,
+    required this.unionRect,
+    required this.accent,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -55,7 +84,17 @@ class _SelectionPainter extends CustomPainter {
         ..color = accent.withAlpha(0x88);
       canvas.drawRect(r, p);
     }
-    if (selected != null) {
+    final union = unionRect;
+    if (union != null) {
+      canvas.drawRect(union, Paint()..color = accent.withAlpha(0x22));
+      canvas.drawRect(
+        union,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = accent,
+      );
+    } else if (selected != null) {
       final r = _toRect(selected!);
       canvas.drawRect(r, Paint()..color = accent.withAlpha(0x22));
       canvas.drawRect(
@@ -73,7 +112,10 @@ class _SelectionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SelectionPainter old) =>
-      old.hover != hover || old.selected != selected || old.accent != accent;
+      old.hover != hover ||
+      old.selected != selected ||
+      old.unionRect != unionRect ||
+      old.accent != accent;
 }
 
 /// Tiny label rendered next to the cursor showing the hovered widget's type.
