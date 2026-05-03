@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 /// Set of stroke icons used by the floating toolbar. Hand-ported from the
 /// agentation web bundle so the package ships zero asset weight and zero
 /// extra dependencies. All glyphs render into a 24×24 box.
-enum ToolbarIcon { wand, eye, duplicate, trash, settings, close, pencil, plus }
+enum ToolbarIcon { listSparkle, eye, duplicate, trash, settings, close, pencil, plus }
 
 class ToolbarIconPainter extends CustomPainter {
   final ToolbarIcon icon;
@@ -35,8 +35,8 @@ class ToolbarIconPainter extends CustomPainter {
     final fill = Paint()..color = color;
 
     switch (icon) {
-      case ToolbarIcon.wand:
-        _wand(canvas, stroke, fill);
+      case ToolbarIcon.listSparkle:
+        _listSparkle(canvas, stroke);
         break;
       case ToolbarIcon.eye:
         _eye(canvas, stroke);
@@ -63,21 +63,27 @@ class ToolbarIconPainter extends CustomPainter {
     canvas.restore();
   }
 
-  void _wand(Canvas canvas, Paint stroke, Paint fill) {
-    // Diamond sparkle at the top-right.
-    final spark = Path()
-      ..moveTo(17.5, 4.5)
-      ..lineTo(18.6, 7.0)
-      ..lineTo(21.0, 8.0)
-      ..lineTo(18.6, 9.0)
-      ..lineTo(17.5, 11.5)
-      ..lineTo(16.4, 9.0)
-      ..lineTo(14.0, 8.0)
-      ..lineTo(16.4, 7.0)
+  void _listSparkle(Canvas canvas, Paint stroke) {
+    // Three left-aligned list lines (varying lengths).
+    canvas.drawLine(const Offset(5.5, 6.75), const Offset(18.5, 6.75), stroke);
+    canvas.drawLine(const Offset(5.5, 12.0), const Offset(11.5, 12.0), stroke);
+    canvas.drawLine(const Offset(5.5, 17.25), const Offset(9.25, 17.25), stroke);
+    // Four-pointed sparkle at (16, 16) with concave-curved sides.
+    final sparkle = Path()
+      ..moveTo(16, 12.75)
+      ..lineTo(16.5179, 13.9677)
+      ..cubicTo(16.8078, 14.6494, 17.3506, 15.1922, 18.0323, 15.4821)
+      ..lineTo(19.25, 16)
+      ..lineTo(18.0323, 16.5179)
+      ..cubicTo(17.3506, 16.8078, 16.8078, 17.3506, 16.5179, 18.0323)
+      ..lineTo(16, 19.25)
+      ..lineTo(15.4821, 18.0323)
+      ..cubicTo(15.1922, 17.3506, 14.6494, 16.8078, 13.9677, 16.5179)
+      ..lineTo(12.75, 16)
+      ..lineTo(13.9677, 15.4821)
+      ..cubicTo(14.6494, 15.1922, 15.1922, 14.6494, 15.4821, 13.9677)
       ..close();
-    canvas.drawPath(spark, fill);
-    // Wand stroke from bottom-left to the sparkle base.
-    canvas.drawLine(const Offset(4.0, 20.0), const Offset(15.5, 8.5), stroke);
+    canvas.drawPath(sparkle, stroke);
   }
 
   void _eye(Canvas canvas, Paint stroke) {

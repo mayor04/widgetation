@@ -23,8 +23,9 @@ class EditsLayer extends StatelessWidget {
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              for (final edit in state.edits)
-                EditIndexBubble(key: ValueKey(edit.id), edit: edit),
+              if (!state.hidden)
+                for (final edit in state.edits)
+                  EditIndexBubble(key: ValueKey(edit.id), edit: edit),
               if (state.draft != null && !state.draft!.isEditing)
                 _DraftPlusBubble(cursor: state.draft!.cursor),
               if (state.draft != null)

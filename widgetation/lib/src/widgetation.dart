@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter/widgets.dart';
 
 import 'config.dart';
+import 'edits/edit_label.dart';
 import 'edits/edits_layer.dart';
 import 'frame_capturer.dart';
 import 'select_mode_overlay.dart';
@@ -50,7 +51,6 @@ class _WidgetationState extends State<Widgetation> {
 
   WidgetPicker? _picker;
   bool _selectActive = false;
-  bool _highlightsVisible = true;
   ScrollPosition? _panTarget;
 
   SelectionStore? _selection;
@@ -183,20 +183,17 @@ class _WidgetationState extends State<Widgetation> {
                       ),
                     ),
                   ),
-                if (_selectActive && _highlightsVisible)
-                  const SelectionHighlights(),
-                if (_selectActive && _highlightsVisible)
-                  const SelectionInfoChip(),
+                if (_selectActive) const SelectionHighlights(),
+                if (_selectActive) const SelectionInfoChip(),
                 if (_selectActive) const EditsLayer(),
                 WidgetationToolbar(
                   alignment: cfg.selectButtonAlignment,
                   config: cfg,
-                  highlightsVisible: _highlightsVisible,
                   serverRunning: _server != null,
                   viewerConnected: _server?.hasViewer ?? false,
-                  onToggleHighlights: _toggleHighlights,
-                  onCopySelection: _copySelection,
-                  onClearSelection: _clearSelection,
+                  onCopyEdits: _copyAllEdits,
+                  onDeleteEdits: _deleteAllEdits,
+                  onToggleEditsHidden: _toggleEditsHidden,
                   onExpandedChanged: _setSelectActive,
                 ),
               ],
@@ -218,23 +215,15 @@ class _WidgetationState extends State<Widgetation> {
     }
   }
 
-  void _toggleHighlights() => setState(() => _highlightsVisible = !_highlightsVisible);
-
-  void _copySelection() {
-    final s = _selection?.value.primary;
-    if (s == null) return;
-    final loc = s.file == null ? s.type : '${s.type} · ${s.file}:${s.line ?? '?'}';
-    Clipboard.setData(ClipboardData(text: loc));
+  void _copyAllEdits() {
+    final edits = _edits?.value.edits ?? const [];
+    if (edits.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: _formatEditsForClipboard(edits)));
   }
 
-  void _clearSelection() {
-    if (_edits?.value.hasOpenDraft ?? false) {
-      _edits?.shake();
-      return;
-    }
-    _selection?.clear();
-    _hover?.clear();
-  }
+  void _deleteAllEdits() => _edits?.clear();
+
+  void _toggleEditsHidden() => _edits?.toggleHidden();
 
   Element? _root() {
     final ctx = _captureKey.currentContext;
@@ -290,4 +279,19 @@ class _WidgetationState extends State<Widgetation> {
 
   void _onPanEnd(DragEndDetails d) => _panTarget = null;
   void _onPanCancel() => _panTarget = null;
+}
+
+String _formatEditsForClipboard(List<Edit> edits) {
+  final sb = StringBuffer('### **Page Feedback List**\n\n');
+  for (final edit in edits) {
+    final node = edit.nodes.isEmpty ? null : edit.nodes.first;
+    final label = node == null ? '(unknown)' : formatNodeLabel(node);
+    final file = edit.files.isNotEmpty ? edit.files.first : null;
+    final source = file == null ? '(unknown)' : '$file:${node?.line ?? '?'}';
+    sb.writeln('${edit.index}. $label');
+    sb.writeln('Source: $source');
+    sb.writeln('Feedback: ${edit.text}');
+    sb.writeln();
+  }
+  return sb.toString().trimRight();
 }

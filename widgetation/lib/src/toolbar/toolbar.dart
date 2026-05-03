@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../config.dart';
-import '../state/selection_store.dart';
+import '../state/edits_store.dart';
 import '../state/widgetation_store.dart';
 import 'status_popup.dart';
 import 'toolbar_button.dart';
@@ -16,26 +16,24 @@ class WidgetationToolbar extends StatefulWidget {
   final WidgetationConfig config;
 
   // Live state from the host widget.
-  final bool highlightsVisible;
   final bool serverRunning;
   final bool viewerConnected;
 
   // Callbacks.
-  final VoidCallback onToggleHighlights;
-  final VoidCallback onCopySelection;
-  final VoidCallback onClearSelection;
+  final VoidCallback onCopyEdits;
+  final VoidCallback onDeleteEdits;
+  final VoidCallback onToggleEditsHidden;
   final ValueChanged<bool> onExpandedChanged;
 
   const WidgetationToolbar({
     super.key,
     required this.alignment,
     required this.config,
-    required this.highlightsVisible,
     required this.serverRunning,
     required this.viewerConnected,
-    required this.onToggleHighlights,
-    required this.onCopySelection,
-    required this.onClearSelection,
+    required this.onCopyEdits,
+    required this.onDeleteEdits,
+    required this.onToggleEditsHidden,
     required this.onExpandedChanged,
   });
 
@@ -138,9 +136,9 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
                                 height: _collapsedSize,
                                 child: CustomPaint(
                                   painter: ToolbarIconPainter(
-                                    icon: ToolbarIcon.wand,
+                                    icon: ToolbarIcon.listSparkle,
                                     color: const Color(0xFFFFFFFF),
-                                    strokeWidth: 1.8,
+                                    strokeWidth: 1.5,
                                   ),
                                 ),
                               ),
@@ -152,13 +150,13 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
                           opacity: ((t - 0.5) * 2).clamp(0.0, 1.0),
                           child: IgnorePointer(
                             ignoring: t < 0.9,
-                            child: StoreBuilder<SelectionStore, SelectionState>(
-                              builder: (context, selection) => _ControlsRow(
-                                highlightsVisible: widget.highlightsVisible,
-                                hasSelection: selection.hasSelection,
-                                onToggleHighlights: widget.onToggleHighlights,
-                                onCopy: widget.onCopySelection,
-                                onClear: widget.onClearSelection,
+                            child: StoreBuilder<EditsStore, EditsState>(
+                              builder: (context, edits) => _ControlsRow(
+                                hidden: edits.hidden,
+                                hasEdits: edits.edits.isNotEmpty,
+                                onToggleHidden: widget.onToggleEditsHidden,
+                                onCopy: widget.onCopyEdits,
+                                onDelete: widget.onDeleteEdits,
                                 onSettings: _toggleSettings,
                                 onClose: _collapse,
                               ),
@@ -179,20 +177,20 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
 }
 
 class _ControlsRow extends StatelessWidget {
-  final bool highlightsVisible;
-  final bool hasSelection;
-  final VoidCallback onToggleHighlights;
+  final bool hidden;
+  final bool hasEdits;
+  final VoidCallback onToggleHidden;
   final VoidCallback onCopy;
-  final VoidCallback onClear;
+  final VoidCallback onDelete;
   final VoidCallback onSettings;
   final VoidCallback onClose;
 
   const _ControlsRow({
-    required this.highlightsVisible,
-    required this.hasSelection,
-    required this.onToggleHighlights,
+    required this.hidden,
+    required this.hasEdits,
+    required this.onToggleHidden,
     required this.onCopy,
-    required this.onClear,
+    required this.onDelete,
     required this.onSettings,
     required this.onClose,
   });
@@ -206,16 +204,16 @@ class _ControlsRow extends StatelessWidget {
         children: [
           ToolbarControlButton(
             icon: ToolbarIcon.duplicate,
-            onTap: hasSelection ? onCopy : null,
+            onTap: hasEdits ? onCopy : null,
           ),
           ToolbarControlButton(
             icon: ToolbarIcon.trash,
-            onTap: hasSelection ? onClear : null,
+            onTap: hasEdits ? onDelete : null,
           ),
           ToolbarControlButton(
             icon: ToolbarIcon.eye,
-            active: !highlightsVisible,
-            onTap: onToggleHighlights,
+            active: hidden,
+            onTap: onToggleHidden,
           ),
           ToolbarControlButton(
             icon: ToolbarIcon.settings,

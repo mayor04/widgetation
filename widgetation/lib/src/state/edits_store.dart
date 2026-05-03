@@ -89,8 +89,9 @@ class EditDraft {
 class EditsState {
   final List<Edit> edits;
   final EditDraft? draft;
+  final bool hidden;
 
-  const EditsState({this.edits = const [], this.draft});
+  const EditsState({this.edits = const [], this.draft, this.hidden = false});
 
   static const empty = EditsState();
 
@@ -108,6 +109,7 @@ class EditsStore extends WidgetationStore<EditsState> {
     if (value.draft != null) return;
     emit(EditsState(
       edits: value.edits,
+      hidden: value.hidden,
       draft: EditDraft(
         cursor: cursor,
         nodes: [node],
@@ -121,7 +123,7 @@ class EditsStore extends WidgetationStore<EditsState> {
   void updateDraftText(String text) {
     final d = value.draft;
     if (d == null) return;
-    emit(EditsState(edits: value.edits, draft: d.copyWith(text: text)));
+    emit(EditsState(edits: value.edits, hidden: value.hidden, draft: d.copyWith(text: text)));
   }
 
   /// Bump [EditDraft.shakeNonce] to trigger a shake animation. Used when
@@ -132,13 +134,14 @@ class EditsStore extends WidgetationStore<EditsState> {
     if (d == null) return;
     emit(EditsState(
       edits: value.edits,
+      hidden: value.hidden,
       draft: d.copyWith(shakeNonce: d.shakeNonce + 1),
     ));
   }
 
   void cancelDraft() {
     if (value.draft == null) return;
-    emit(EditsState(edits: value.edits));
+    emit(EditsState(edits: value.edits, hidden: value.hidden));
   }
 
   /// Persist the current draft to the edits list. New drafts append a new
@@ -155,7 +158,7 @@ class EditsStore extends WidgetationStore<EditsState> {
       final updated = value.edits
           .map((e) => e.id == d.editingId ? e.copyWith(text: text) : e)
           .toList(growable: false);
-      emit(EditsState(edits: updated));
+      emit(EditsState(edits: updated, hidden: value.hidden));
     } else {
       _idCounter += 1;
       final edit = Edit(
@@ -169,7 +172,7 @@ class EditsStore extends WidgetationStore<EditsState> {
         ancestors: d.ancestors,
         createdAt: DateTime.now(),
       );
-      emit(EditsState(edits: [...value.edits, edit]));
+      emit(EditsState(edits: [...value.edits, edit], hidden: value.hidden));
     }
   }
 
@@ -184,6 +187,7 @@ class EditsStore extends WidgetationStore<EditsState> {
     if (identical(edit, _missing)) return;
     emit(EditsState(
       edits: value.edits,
+      hidden: value.hidden,
       draft: EditDraft(
         editingId: edit.id,
         cursor: edit.cursor,
@@ -220,6 +224,7 @@ class EditsStore extends WidgetationStore<EditsState> {
     final dropDraft = value.draft?.editingId == id;
     emit(EditsState(
       edits: remaining,
+      hidden: value.hidden,
       draft: dropDraft ? null : value.draft,
     ));
   }
@@ -227,6 +232,14 @@ class EditsStore extends WidgetationStore<EditsState> {
   void clear() {
     if (value.edits.isEmpty && value.draft == null) return;
     emit(EditsState.empty);
+  }
+
+  void toggleHidden() {
+    emit(EditsState(
+      edits: value.edits,
+      draft: value.draft,
+      hidden: !value.hidden,
+    ));
   }
 
   static final Edit _missing = Edit(
