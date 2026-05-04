@@ -13,6 +13,7 @@ enum WidgetationMode {
 
 /// Configuration for [Widgetation].
 class WidgetationConfig {
+  /// Runtime behaviour. See [WidgetationMode].
   final WidgetationMode mode;
 
   /// Where the floating select-mode button sits in [WidgetationMode.edit].
