@@ -1,6 +1,6 @@
 name: widgetation
 description: Visual feedback for AI coding agents. Click any widget in your Flutter app, add a note, and paste structured context into Claude Code, Codex, or any AI tool.
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/mayor04/widgetation
 issue_tracker: https://github.com/mayor04/widgetation/issues
 
