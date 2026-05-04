@@ -1,50 +1,92 @@
-# Widgetation
+# widgetation
 
-Two sibling Flutter projects, each with its own independent git repo:
+**Visual feedback. For agents.**
 
-* [`widgetation/`](./widgetation) — pub.dev-ready Flutter package. Wrap
-  your app with `InspectorStreamer` and it hosts an on-demand WebSocket
-  server that streams the widget tree.
-* [`widgetation_viewer/`](./widgetation_viewer) — desktop companion app
-  (macOS / Windows / Linux). Connects to a running streamer and renders
-  the live screenshot with a hover-to-inspect overlay and a side panel.
+Widgetation turns UI annotations into structured context that AI coding agents can understand and act on. Click any element, add a note, and paste the output into Claude Code, Codex, or any AI tool.
 
-## Run them together
+Inspired by [agentation](https://www.agentation.com/).
 
-In one terminal — start an app that uses the streamer (the package's
-example):
+## How you use it
 
-```bash
-cd widgetation/example
-fvm flutter run -d macos      # or any device — iOS, Android, etc.
+1. Click the **◎** icon in the bottom-right corner to activate
+2. Hover over elements to see their names highlighted
+3. Click any element to add an annotation
+4. Write your feedback and click **Add**
+5. Click **⧉** to copy formatted markdown
+6. Paste into your agent
+
+## Setup
+
+### Prompt setup (recommended)
+
+Copy this prompt into your agent and let it wire everything up:
+
+```text
+Add the widgetation package to this Flutter app.
+
+1. Add `widgetation: ^latest` to pubspec.yaml under dependencies.
+2. Run `flutter pub get`.
+3. In lib/main.dart, import `package:widgetation/widgetation.dart`
+   and wrap the root widget passed to runApp with `Widgetation(child: ...)`.
+   Example: `runApp(const Widgetation(child: MyApp()));`
+4. Do not change anything else.
 ```
 
-The example wraps itself in `InspectorStreamer` and starts a WebSocket
-server on `127.0.0.1:7321`.
+### Manual setup
 
-In another terminal — start the viewer:
+Add the dependency:
 
-```bash
-cd widgetation_viewer
-fvm flutter run -d macos
+```yaml
+dependencies:
+  widgetation: ^0.1.0
 ```
 
-In the viewer, leave host/port at the defaults (`127.0.0.1:7321`) and
-click **Connect**. As long as the viewer window is focused, frames stream
-in at ~8 fps. Hover over the screenshot to highlight the smallest widget
-under the cursor; click an entry in the right-hand tree to pin a
-selection. Unfocus the viewer window and the streamer goes idle.
+Wrap your app's root:
 
-## Notes
+```dart
+import 'package:flutter/material.dart';
+import 'package:widgetation/widgetation.dart';
 
-* Tree coordinates are logical pixels; the PNG is physical pixels. The
-  viewer scales image-space to its laid-out size and converts cursor
-  positions back to logical pixels before walking the tree.
-* In release mode the streamer wrapper is a no-op — no server is bound.
-* On macOS, the viewer's entitlements include `network.client`, and the
-  example's include `network.server`; both are scaffolded automatically
-  by the templates here. iOS / Android need no extra setup for localhost.
+void main() {
+  runApp(const Widgetation(child: MyApp()));
+}
+```
+
+That's it. The overlay only mounts in debug and profile builds — in release mode `Widgetation` is a no-op, so it's safe to leave wrapped.
+
+## What you get
+
+- **Click to annotate** — pick any widget, attach a note
+- **Marquee select** — drag across multiple widgets to annotate them as a group
+- **Formatted output** — copy as markdown with widget names, locations, and your notes
+- **Zero release-mode cost** — wrapper compiles out
+
+## How it works
+
+Widgetation hooks into Flutter's element tree to identify the widget under your cursor — including its type, the source file it was built in, and the line number. When you write a note and copy, it bundles each annotation with that location info as markdown, so the agent knows exactly which widget in which file you're talking about.
+
+Example clipboard output:
+
+```markdown
+### **Page Feedback List**
+
+1. Text ("Welcome back")
+Source: lib/screens/home_page.dart:42
+Feedback: this should be larger and centered on mobile
+
+2. ElevatedButton +2
+Source: lib/screens/home_page.dart:88, lib/widgets/cta.dart:14
+Feedback: align these three CTAs horizontally with equal spacing
+```
+
+Pasting this into Claude Code or Codex gives the agent everything it needs to find and edit the right code.
+
+## Compatibility
+
+- Flutter `>=3.10.0`
+- Dart SDK `^3.11.1`
+- iOS, Android, macOS, Windows, Linux, web
 
 ## License
 
-Both projects are MIT-licensed. See each project's `LICENSE`.
+MIT.
