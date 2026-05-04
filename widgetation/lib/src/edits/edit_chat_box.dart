@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../protocol/tree_node.dart';
 import '../state/edits_store.dart';
+import '../state/selection_store.dart';
 import '../state/widgetation_store.dart';
 import '../theme.dart';
 import '../toolbar/toolbar_icons.dart';
@@ -27,13 +29,18 @@ class EditChatBox extends StatefulWidget {
 }
 
 class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin {
-  static const Size _boxSize = Size(270, 116);
+  static const Size _collapsedSize = Size(270, 116);
+  static const double _styleLineHeight = 16;
+  static const double _stylesBlockPadV = 10;
+  static const double _stylesBlockGap = 8;
 
   late final TextEditingController _ctrl;
   late final FocusNode _focus;
   late final AnimationController _shakeCtrl;
 
   EditsStore? _store;
+  SelectionStore? _selection;
+  bool _expanded = false;
 
   @override
   void initState() {
@@ -51,6 +58,7 @@ class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin
   void didChangeDependencies() {
     super.didChangeDependencies();
     _store = context.read<EditsStore>();
+    _selection = context.read<SelectionStore>();
     _publishHasText();
   }
 
@@ -91,20 +99,45 @@ class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin
     return KeyEventResult.handled;
   }
 
-  void _commit() => _store?.commitDraft(_ctrl.text);
-  void _cancel() => _store?.cancelDraft();
+  void _commit() {
+    _store?.commitDraft(_ctrl.text);
+    _selection?.clear();
+  }
+
+  void _cancel() {
+    _store?.cancelDraft();
+    _selection?.clear();
+  }
+
   void _delete() {
     final id = widget.draft.editingId;
     if (id != null) _store?.delete(id);
+  }
+
+  void _toggleExpanded() {
+    final node = widget.draft.nodes.isNotEmpty ? widget.draft.nodes.first : null;
+    if (node == null || node.widgetProperties.isEmpty) return;
+    setState(() => _expanded = !_expanded);
   }
 
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final theme = WidgetationTheme.of(context);
+    final node = widget.draft.nodes.isNotEmpty ? widget.draft.nodes.first : null;
+    final hasProps = node != null && node.widgetProperties.isNotEmpty;
+    final propsCount = node?.widgetProperties.length ?? 0;
+
+    // Estimated extra height when the styles block is expanded — used for
+    // position calculation so the box still fits onscreen after expanding.
+    final expandedExtra = _expanded
+        ? _stylesBlockPadV * 2 + _styleLineHeight * propsCount + _stylesBlockGap
+        : 0;
+    final boxSize = Size(_collapsedSize.width, _collapsedSize.height + expandedExtra);
+
     final pos = chooseChatBoxPosition(
       anchor: widget.draft.cursor,
-      box: _boxSize,
+      box: boxSize,
       screen: media.size,
       insets: media.padding + const EdgeInsets.all(8),
     );
@@ -120,7 +153,7 @@ class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin
           return Transform.translate(offset: Offset(dx, 0), child: child);
         },
         child: SizedBox(
-          width: _boxSize.width,
+          width: _collapsedSize.width,
           child: Container(
             decoration: BoxDecoration(
               color: theme.surface,
@@ -135,7 +168,16 @@ class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _Header(label: label),
+                _Header(
+                  label: label,
+                  expanded: _expanded,
+                  toggleable: hasProps,
+                  onToggle: _toggleExpanded,
+                ),
+                if (_expanded && node != null) ...[
+                  const SizedBox(height: _stylesBlockGap),
+                  _StylesBlock(node: node),
+                ],
                 const SizedBox(height: 8),
                 _TextInput(controller: _ctrl, focusNode: _focus, onSubmitted: (_) => _commit()),
                 const SizedBox(height: 10),
@@ -157,35 +199,115 @@ class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin
 
 class _Header extends StatelessWidget {
   final String label;
-  const _Header({required this.label});
+  final bool expanded;
+  final bool toggleable;
+  final VoidCallback onToggle;
+
+  const _Header({
+    required this.label,
+    required this.expanded,
+    required this.toggleable,
+    required this.onToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
     final muted = WidgetationTheme.of(context).onSurfaceMuted;
-    return Row(
-      children: [
-        SizedBox(
-          width: 14,
-          height: 14,
-          child: CustomPaint(
-            painter: ToolbarIconPainter(
-              icon: ToolbarIcon.chevronRight,
-              color: muted,
-              strokeWidth: 1.6,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: toggleable ? onToggle : null,
+      child: Row(
+        children: [
+          AnimatedRotation(
+            turns: expanded ? 0.25 : 0,
+            duration: const Duration(milliseconds: 140),
+            child: SizedBox(
+              width: 14,
+              height: 14,
+              child: CustomPaint(
+                painter: ToolbarIconPainter(
+                  icon: ToolbarIcon.chevronRight,
+                  color: muted,
+                  strokeWidth: 1.6,
+                ),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w400),
-            textDirection: TextDirection.ltr,
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w400),
+              textDirection: TextDirection.ltr,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StylesBlock extends StatelessWidget {
+  final TreeNode node;
+  const _StylesBlock({required this.node});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = WidgetationTheme.of(context);
+    final entries = node.widgetProperties.entries
+        .where((e) => e.key != 'inherit')
+        .toList(growable: false);
+    final keyColor = theme.brightness == Brightness.dark
+        ? const Color(0xFFC084FC)
+        : const Color(0xFF7C3AED);
+    final valueColor = theme.onSurfaceMuted;
+    final bg = theme.brightness == Brightness.dark
+        ? const Color(0xFF0E0E0E)
+        : const Color(0xFFEFEFF1);
+
+    return Container(
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final e in entries)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${e.key}: ',
+                      style: TextStyle(color: keyColor),
+                    ),
+                    TextSpan(
+                      text: e.value,
+                      style: TextStyle(color: valueColor),
+                    ),
+                    TextSpan(
+                      text: ';',
+                      style: TextStyle(color: valueColor),
+                    ),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textDirection: TextDirection.ltr,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontFamilyFallback: <String>['Menlo', 'Consolas', 'Courier'],
+                  fontSize: 11,
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -265,49 +387,61 @@ class _Footer extends StatelessWidget {
     return Row(
       children: [
         if (showDelete)
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onDelete,
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CustomPaint(
-                painter: ToolbarIconPainter(
-                  icon: ToolbarIcon.trash,
-                  color: theme.onSurfaceMuted,
-                  strokeWidth: 1.2,
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onDelete,
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CustomPaint(
+                  painter: ToolbarIconPainter(
+                    icon: ToolbarIcon.trash,
+                    color: theme.onSurfaceMuted,
+                    strokeWidth: 1.2,
+                  ),
                 ),
               ),
             ),
           ),
         const Spacer(),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onCancel,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: theme.onSurfaceMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onCancel,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color: theme.onSurfaceMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+                textDirection: TextDirection.ltr,
               ),
-              textDirection: TextDirection.ltr,
             ),
           ),
         ),
         const SizedBox(width: 4),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPrimary,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(color: theme.accent, borderRadius: BorderRadius.circular(16)),
-            child: Text(
-              primaryLabel,
-              style: TextStyle(color: theme.onAccent, fontSize: 11, fontWeight: FontWeight.w600),
-              textDirection: TextDirection.ltr,
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onPrimary,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: theme.accent,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                primaryLabel,
+                style: TextStyle(color: theme.onAccent, fontSize: 11, fontWeight: FontWeight.w600),
+                textDirection: TextDirection.ltr,
+              ),
             ),
           ),
         ),

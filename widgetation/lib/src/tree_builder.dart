@@ -2,16 +2,17 @@ import 'package:flutter/widgets.dart';
 
 import 'protocol/tree_node.dart';
 
-/// True when [file] points inside the Flutter SDK. Catches both
-/// `package:flutter/...` import URIs and absolute SDK paths like
-/// `file:///.../packages/flutter/lib/src/material/list_tile.dart`.
+/// True when [file] points at code we don't consider user-owned: the
+/// Flutter SDK itself or any third-party package resolved through the
+/// pub cache (e.g. `file:///.../.pub-cache/hosted/pub.dev/forui-0.19.0/...`).
 /// A null [file] means creation-location data is unavailable, which we
-/// treat as flutter-side so unannotated nodes don't masquerade as user
-/// widgets.
-bool isFlutterWidgetFile(String? file) {
+/// treat as external so unannotated nodes don't masquerade as user widgets.
+bool isExternalWidgetFile(String? file) {
   if (file == null) return true;
   return file.startsWith('package:flutter/') ||
-      file.contains('/packages/flutter/');
+      file.contains('/packages/flutter/') ||
+      file.contains('/.pub-cache/') ||
+      file.contains('/pub-cache/');
 }
 
 /// Walks an [Element] tree and produces typed [TreeNode]s.
@@ -68,7 +69,7 @@ class TreeBuilder {
 
       if (nearest == null) {
         final file = _creationFile(widget);
-        if (!isFlutterWidgetFile(file)) {
+        if (!isExternalWidgetFile(file)) {
           nearest = typeName;
         }
       }

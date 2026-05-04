@@ -7,7 +7,6 @@ import 'connectors_panel.dart';
 import 'conversations_table.dart';
 import 'invite_dialog.dart';
 import 'kpi_row.dart';
-import 'sidebar.dart';
 import 'topbar.dart';
 import 'usage_panel.dart';
 
@@ -22,12 +21,7 @@ class DashboardPage extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final compact = constraints.maxWidth < 900;
-            return Row(
-              children: [
-                if (!compact) const DashboardSidebar(activeKey: 'overview'),
-                const Expanded(child: _DashboardMain()),
-              ],
-            );
+            return Row(children: [const Expanded(child: _DashboardMain())]);
           },
         ),
       ),
@@ -86,10 +80,7 @@ class _GreetingStrip extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Text('Good morning, Mayor.', style: AppType.displayMd),
               const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Here is what your workspace did while you were away.',
-                style: AppType.bodyMd,
-              ),
+              Text('Here is what your workspace did while you were away.', style: AppType.bodyMd),
             ],
           ),
         ),
@@ -98,10 +89,8 @@ class _GreetingStrip extends StatelessWidget {
           children: [
             ButtonSecondary(
               label: 'Invite teammate',
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (_) => const InviteTeammateDialog(),
-              ),
+              onPressed: () =>
+                  showDialog<void>(context: context, builder: (_) => const InviteTeammateDialog()),
             ),
             const SizedBox(width: AppSpacing.sm),
             const ButtonPrimary(label: 'Start a chat'),

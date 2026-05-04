@@ -82,13 +82,16 @@ class TreeNode {
 
   double get area => w * h;
 
-  /// True when this node's creation-location points inside the Flutter SDK
-  /// (or is unknown). Mirrors the streamer's `isFlutterWidgetFile` check;
-  /// kept in sync there.
+  /// True when this node's creation-location points at framework or
+  /// third-party code (Flutter SDK or pub-cache), or is unknown. Mirrors
+  /// the streamer's `isExternalWidgetFile` check; kept in sync there.
   bool get isFlutterWidget {
     final f = file;
     if (f == null) return true;
-    return f.startsWith('package:flutter/') || f.contains('/packages/flutter/');
+    return f.startsWith('package:flutter/') ||
+        f.contains('/packages/flutter/') ||
+        f.contains('/.pub-cache/') ||
+        f.contains('/pub-cache/');
   }
 
   factory TreeNode.fromJson(Map<String, dynamic> json, TreeNode? parent) {

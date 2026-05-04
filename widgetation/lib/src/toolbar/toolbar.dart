@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
@@ -217,9 +218,9 @@ class _ControlsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final children = <Widget>[
-      ToolbarControlButton(icon: ToolbarIcon.duplicate, onTap: hasEdits ? onCopy : null),
+      _CopyButton(enabled: hasEdits, onCopy: onCopy),
       ToolbarControlButton(icon: ToolbarIcon.trash, onTap: hasEdits ? onDelete : null),
-      ToolbarControlButton(icon: ToolbarIcon.eye, active: hidden, onTap: onToggleHidden),
+      ToolbarControlButton(icon: hidden ? ToolbarIcon.eyeOff : ToolbarIcon.eye, active: hidden, onTap: onToggleHidden),
       ToolbarControlButton(icon: ToolbarIcon.settings, onTap: onSettings),
       const ToolbarDivider(),
       ToolbarControlButton(icon: ToolbarIcon.close, onTap: onClose),
@@ -264,5 +265,135 @@ class _ControlsRow extends StatelessWidget {
             child: translated,
           );
     return Opacity(opacity: a, child: blurred);
+  }
+}
+
+/// Copy button: morphs to a green circle with a checkmark on tap, then
+/// reverses after a short hold so it reads as "copied — done".
+class _CopyButton extends StatefulWidget {
+  final bool enabled;
+  final VoidCallback onCopy;
+
+  const _CopyButton({required this.enabled, required this.onCopy});
+
+  @override
+  State<_CopyButton> createState() => _CopyButtonState();
+}
+
+class _CopyButtonState extends State<_CopyButton>
+    with SingleTickerProviderStateMixin {
+  static const Color _green = Color(0xFF22C55E);
+  static const Duration _holdDuration = Duration(milliseconds: 1400);
+
+  late final AnimationController _ctrl;
+  Timer? _holdTimer;
+  bool _hover = false;
+  bool _down = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+      reverseDuration: const Duration(milliseconds: 320),
+    );
+  }
+
+  @override
+  void dispose() {
+    _holdTimer?.cancel();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    widget.onCopy();
+    _ctrl.forward(from: 0);
+    _holdTimer?.cancel();
+    _holdTimer = Timer(_holdDuration, () {
+      if (mounted) _ctrl.reverse();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = WidgetationTheme.of(context);
+    final disabled = !widget.enabled;
+    final onSurface = theme.onSurface;
+
+    return MouseRegion(
+      cursor: disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTapDown: disabled ? null : (_) => setState(() => _down = true),
+        onTapCancel: disabled ? null : () => setState(() => _down = false),
+        onTapUp: disabled ? null : (_) => setState(() => _down = false),
+        onTap: disabled ? null : _handleTap,
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 100),
+          scale: _down ? 0.92 : 1.0,
+          child: AnimatedBuilder(
+            animation: _ctrl,
+            builder: (context, _) {
+              final t = Curves.easeOutCubic.transform(_ctrl.value);
+              // Sequenced cross-fade: duplicate clears in the first half,
+              // green checkbox arrives in the second.
+              final dupOpacity = (1 - t * 2).clamp(0.0, 1.0);
+              final checkOpacity = (t * 2 - 1).clamp(0.0, 1.0);
+              final fg = disabled
+                  ? onSurface.withAlpha(102)
+                  : (_hover ? onSurface : onSurface.withAlpha(217));
+              final dupColor = fg;
+              final bgIdle = (_hover && !disabled)
+                  ? onSurface.withAlpha(31)
+                  : const Color(0x00000000);
+              // Subtle green wash behind the checkbox so it reads as
+              // "active" without overpowering the bordered glyph.
+              final bgColor = Color.lerp(bgIdle, _green.withAlpha(36), t)!;
+              return Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Opacity(
+                            opacity: dupOpacity,
+                            child: CustomPaint(
+                              painter: ToolbarIconPainter(
+                                icon: ToolbarIcon.duplicate,
+                                color: dupColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned.fill(
+                          child: Opacity(
+                            opacity: checkOpacity,
+                            child: CustomPaint(
+                              painter: ToolbarIconPainter(
+                                icon: ToolbarIcon.checkbox,
+                                color: _green,
+                                strokeWidth: 1.8,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
   }
 }

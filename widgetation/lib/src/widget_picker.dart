@@ -52,7 +52,7 @@ class WidgetPicker {
     for (var i = hits.length - 1; i >= 0; i--) {
       final h = hits[i];
       final node = _builder.describeOnly(h.element, h.depth);
-      if (!isFlutterWidgetFile(node.file)) {
+      if (!isExternalWidgetFile(node.file)) {
         return _builder.describeWithAncestry(h.element, h.depth);
       }
     }
@@ -81,7 +81,7 @@ class WidgetPicker {
         if (box.overlaps(marquee)) {
           if (_coverage(box, marquee) >= _kCoverageThreshold) {
             final described = _builder.describeOnly(element, depth);
-            if (!isFlutterWidgetFile(described.file)) {
+            if (!isExternalWidgetFile(described.file)) {
               survivors.add(_Candidate(element, depth));
               // Any non-flutter descendant of this element would be dropped
               // by the topmost-ancestor rule anyway, so don't pay to walk

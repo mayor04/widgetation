@@ -39,9 +39,9 @@ class ToolbarStatusPopup extends StatelessWidget {
         ),
         Positioned(
           right: 16,
-          bottom: 72,
+          bottom: 65,
           child: Container(
-            width: 296,
+            width: 250,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: theme.surface,
@@ -67,13 +67,6 @@ class ToolbarStatusPopup extends StatelessWidget {
                     SizedBox(height: 12),
                     _ClearOnCopyRow(prefs: prefs),
                     SizedBox(height: 12),
-                    _Divider(color: theme.divider),
-                    SizedBox(height: 10),
-                    _ConnectionRows(
-                      config: config,
-                      serverRunning: serverRunning,
-                      viewerConnected: viewerConnected,
-                    ),
                   ],
                 );
               },
@@ -90,8 +83,7 @@ class _Divider extends StatelessWidget {
   const _Divider({required this.color});
 
   @override
-  Widget build(BuildContext context) =>
-      Container(height: 1, color: color);
+  Widget build(BuildContext context) => Container(height: 1, color: color);
 }
 
 class _BrandHeader extends StatelessWidget {
@@ -105,31 +97,25 @@ class _BrandHeader extends StatelessWidget {
     return Row(
       children: [
         SizedBox(
-          width: 132,
+          width: 80,
           height: 28,
-          child: CustomPaint(
-            painter: WidgetationWordmarkPainter(
-              color: theme.onSurface,
-              strokeWidth: 1.7,
-            ),
+          child: ColorFiltered(
+            colorFilter: ColorFilter.mode(Color(0xFF6AC1EA), BlendMode.srcIn),
+            child: CustomPaint(painter: WidgetationWordmarkPainter(color: theme.onSurface)),
           ),
         ),
         const Spacer(),
         Text(
           'v$kWidgetationVersion',
-          style: TextStyle(
-            color: theme.onSurfaceMuted,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(color: theme.onSurfaceMuted, fontSize: 10, fontWeight: FontWeight.w500),
           textDirection: TextDirection.ltr,
         ),
         const SizedBox(width: 10),
         _IconButton(
           icon: isDark ? ToolbarIcon.sun : ToolbarIcon.moon,
           onTap: () => context.read<PreferencesStore>().setThemeMode(
-                isDark ? WidgetationThemeMode.light : WidgetationThemeMode.dark,
-              ),
+            isDark ? WidgetationThemeMode.light : WidgetationThemeMode.dark,
+          ),
         ),
       ],
     );
@@ -147,7 +133,7 @@ class _IconButton extends StatefulWidget {
 
 class _IconButtonState extends State<_IconButton> {
   bool _hover = false;
-  static const double _size = 28;
+  static const double _size = 20;
 
   @override
   Widget build(BuildContext context) {
@@ -191,11 +177,7 @@ class _MarkerColorSection extends StatelessWidget {
       children: [
         Text(
           'Marker Color',
-          style: TextStyle(
-            color: theme.onSurfaceMuted,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(color: theme.onSurfaceMuted, fontSize: 11, fontWeight: FontWeight.w500),
           textDirection: TextDirection.ltr,
         ),
         const SizedBox(height: 10),
@@ -206,8 +188,7 @@ class _MarkerColorSection extends StatelessWidget {
               _Swatch(
                 color: kMarkerPalette[i],
                 selected: prefs.markerColorIndex == i,
-                onTap: () =>
-                    context.read<PreferencesStore>().setMarkerColorIndex(i),
+                onTap: () => context.read<PreferencesStore>().setMarkerColorIndex(i),
               ),
           ],
         ),
@@ -220,13 +201,9 @@ class _Swatch extends StatelessWidget {
   final Color color;
   final bool selected;
   final VoidCallback onTap;
-  const _Swatch({
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
+  const _Swatch({required this.color, required this.selected, required this.onTap});
 
-  static const double _size = 24;
+  static const double _size = 20;
   static const double _ring = 2;
 
   @override
@@ -246,9 +223,7 @@ class _Swatch extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: selected ? null : color,
-                border: selected
-                    ? Border.all(color: color, width: _ring)
-                    : null,
+                border: selected ? Border.all(color: color, width: _ring) : null,
               ),
             ),
           ),
@@ -280,23 +255,26 @@ class _ClearOnCopyRowState extends State<_ClearOnCopyRow> {
       children: [
         Row(
           children: [
-            _Checkbox(
-              checked: on,
-              onTap: () =>
-                  context.read<PreferencesStore>().setClearOnCopy(!on),
+            SizedBox(
+              height: 16,
+              width: 16,
+              child: _Checkbox(
+                checked: on,
+
+                onTap: () => context.read<PreferencesStore>().setClearOnCopy(!on),
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () =>
-                    context.read<PreferencesStore>().setClearOnCopy(!on),
+                onTap: () => context.read<PreferencesStore>().setClearOnCopy(!on),
                 child: Text(
                   'Clear on copy/send',
                   style: TextStyle(
                     color: theme.onSurface,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
                   ),
                   textDirection: TextDirection.ltr,
                 ),
@@ -330,11 +308,7 @@ class _ClearOnCopyRowState extends State<_ClearOnCopyRow> {
             child: Text(
               'Clears all selections and edits after copying. '
               'Will also apply to the future Send action.',
-              style: TextStyle(
-                color: theme.onSurfaceMuted,
-                fontSize: 11,
-                height: 1.35,
-              ),
+              style: TextStyle(color: theme.onSurfaceMuted, fontSize: 11, height: 1.35),
               textDirection: TextDirection.ltr,
             ),
           ),
@@ -362,10 +336,7 @@ class _Checkbox extends StatelessWidget {
           height: 18,
           decoration: BoxDecoration(
             color: checked ? theme.accent : const Color(0x00000000),
-            border: Border.all(
-              color: checked ? theme.accent : theme.onSurfaceMuted,
-              width: 1.5,
-            ),
+            border: Border.all(color: checked ? theme.accent : theme.onSurfaceMuted, width: 1.5),
             borderRadius: BorderRadius.circular(4),
           ),
           child: checked
@@ -404,16 +375,12 @@ class _ConnectionRows extends StatelessWidget {
         _ConnectionRow(
           label: 'Server',
           value: serverRunning ? 'running' : 'idle',
-          dotColor: serverRunning
-              ? const Color(0xFF22C55E)
-              : const Color(0x66FFFFFF),
+          dotColor: serverRunning ? const Color(0xFF22C55E) : const Color(0x66FFFFFF),
         ),
         _ConnectionRow(
           label: 'Viewer',
           value: viewerConnected ? 'connected' : 'idle',
-          dotColor: viewerConnected
-              ? const Color(0xFF22C55E)
-              : const Color(0x66FFFFFF),
+          dotColor: viewerConnected ? const Color(0xFF22C55E) : const Color(0x66FFFFFF),
         ),
       ],
     );
@@ -449,11 +416,7 @@ class _ConnectionRow extends StatelessWidget {
           ],
           Text(
             value,
-            style: TextStyle(
-              color: theme.onSurface,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(color: theme.onSurface, fontSize: 10, fontWeight: FontWeight.w500),
             textDirection: TextDirection.ltr,
           ),
         ],
@@ -461,4 +424,3 @@ class _ConnectionRow extends StatelessWidget {
     );
   }
 }
-

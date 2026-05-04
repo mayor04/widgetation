@@ -129,13 +129,13 @@ class _HoverPopover extends StatelessWidget {
             if (label.isNotEmpty)
               Text(
                 label,
-                style: TextStyle(color: fgMuted, fontSize: 12, fontStyle: FontStyle.italic),
+                style: TextStyle(color: fgMuted, fontSize: 11, fontStyle: FontStyle.italic),
                 textDirection: TextDirection.ltr,
               ),
             if (label.isNotEmpty) const SizedBox(height: 4),
             Text(
               edit.text,
-              style: TextStyle(color: fg, fontSize: 14, fontWeight: FontWeight.w500),
+              style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w500),
               textDirection: TextDirection.ltr,
             ),
           ],

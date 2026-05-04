@@ -13,16 +13,13 @@ class DashboardTopBar extends StatelessWidget {
       height: 64,
       decoration: const BoxDecoration(
         color: AppColors.canvas,
-        border: Border(
-          bottom: BorderSide(color: AppColors.hairline, width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.hairline, width: 1)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Row(
         children: const [
           _Breadcrumbs(),
           Spacer(),
-          _SearchField(),
           SizedBox(width: AppSpacing.md),
           _IconAction(icon: Icons.notifications_none, badge: '3'),
           SizedBox(width: AppSpacing.xs),
@@ -44,10 +41,7 @@ class _Breadcrumbs extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(
-          'Anthropic',
-          style: AppType.bodySm.copyWith(color: AppColors.muted),
-        ),
+        Text('Anthropic', style: AppType.bodySm.copyWith(color: AppColors.muted)),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 8),
           child: Icon(Icons.chevron_right, size: 14, color: AppColors.muted),
@@ -89,10 +83,7 @@ class _SearchField extends StatelessWidget {
               border: Border.all(color: AppColors.hairline),
               borderRadius: BorderRadius.circular(AppRadius.xs),
             ),
-            child: Text(
-              '⌘K',
-              style: AppType.caption.copyWith(color: AppColors.muted),
-            ),
+            child: Text('⌘K', style: AppType.caption.copyWith(color: AppColors.muted)),
           ),
         ],
       ),
@@ -125,10 +116,7 @@ class _IconAction extends StatelessWidget {
               top: -4,
               right: -4,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 5,
-                  vertical: 1,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(AppRadius.pill),

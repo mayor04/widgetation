@@ -3,16 +3,16 @@ import 'package:flutter/widgets.dart';
 /// Package version surfaced in the settings popup. Bump alongside pubspec.
 const String kWidgetationVersion = '0.1.0';
 
-/// Marker color choices shown in the settings popup. Index 2 (cyan) is the
+/// Marker color choices shown in the settings popup. Index 1 (blue) is the
 /// out-of-the-box default; users pick another via [PreferencesStore].
 const List<Color> kMarkerPalette = <Color>[
-  Color(0xFF7C3AED), // purple
-  Color(0xFF2563EB), // blue
-  Color(0xFF06B6D4), // cyan
-  Color(0xFF22C55E), // green
-  Color(0xFFEAB308), // yellow
-  Color(0xFFF97316), // orange
-  Color(0xFFEF4444), // red
+  Color(0xFF6355FE), // purple
+  Color(0xFF008BFF), // blue
+  Color(0xFF00C7D4), // cyan
+  Color(0xFF00CA48), // green
+  Color(0xFFFFC900), // yellow
+  Color(0xFFFF8500), // orange
+  Color(0xFFFF022D), // red
 ];
 
 /// Color tokens used by every drawn surface in the package. Built by the
@@ -46,17 +46,17 @@ class WidgetationThemeData {
   });
 
   WidgetationThemeData withAccent(Color color) => WidgetationThemeData(
-        surface: surface,
-        surfaceMuted: surfaceMuted,
-        surfaceElevated: surfaceElevated,
-        onSurface: onSurface,
-        onSurfaceMuted: onSurfaceMuted,
-        divider: divider,
-        shadow: shadow,
-        accent: color,
-        onAccent: onAccent,
-        brightness: brightness,
-      );
+    surface: surface,
+    surfaceMuted: surfaceMuted,
+    surfaceElevated: surfaceElevated,
+    onSurface: onSurface,
+    onSurfaceMuted: onSurfaceMuted,
+    divider: divider,
+    shadow: shadow,
+    accent: color,
+    onAccent: onAccent,
+    brightness: brightness,
+  );
 
   @override
   bool operator ==(Object other) {
@@ -75,17 +75,17 @@ class WidgetationThemeData {
 
   @override
   int get hashCode => Object.hash(
-        surface,
-        surfaceMuted,
-        surfaceElevated,
-        onSurface,
-        onSurfaceMuted,
-        divider,
-        shadow,
-        accent,
-        onAccent,
-        brightness,
-      );
+    surface,
+    surfaceMuted,
+    surfaceElevated,
+    onSurface,
+    onSurfaceMuted,
+    divider,
+    shadow,
+    accent,
+    onAccent,
+    brightness,
+  );
 }
 
 /// Dark surface palette — preserves the existing pre-theming look.
@@ -94,8 +94,8 @@ const WidgetationThemeData kWidgetationDarkTheme = WidgetationThemeData(
   surfaceMuted: Color(0xFF222222),
   surfaceElevated: Color(0xEE111111),
   onSurface: Color(0xFFFFFFFF),
-  onSurfaceMuted: Color(0xB3FFFFFF),
-  divider: Color(0x22FFFFFF),
+  onSurfaceMuted: Color.fromARGB(111, 255, 255, 255),
+  divider: Color(0x12FFFFFF),
   shadow: Color(0x33000000),
   brightness: Brightness.dark,
   accent: Color(0xFF06B6D4),
@@ -122,15 +122,10 @@ const WidgetationThemeData kWidgetationLightTheme = WidgetationThemeData(
 class WidgetationTheme extends InheritedWidget {
   final WidgetationThemeData data;
 
-  const WidgetationTheme({
-    super.key,
-    required this.data,
-    required super.child,
-  });
+  const WidgetationTheme({super.key, required this.data, required super.child});
 
   static WidgetationThemeData of(BuildContext context) {
-    final scope =
-        context.dependOnInheritedWidgetOfExactType<WidgetationTheme>();
+    final scope = context.dependOnInheritedWidgetOfExactType<WidgetationTheme>();
     assert(scope != null, 'No WidgetationTheme found in context');
     return scope!.data;
   }

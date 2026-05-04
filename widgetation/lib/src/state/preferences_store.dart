@@ -14,7 +14,7 @@ class PreferencesState {
 
   const PreferencesState({
     this.themeMode = WidgetationThemeMode.dark,
-    this.markerColorIndex = 2,
+    this.markerColorIndex = 1,
     this.clearOnCopy = false,
   });
 

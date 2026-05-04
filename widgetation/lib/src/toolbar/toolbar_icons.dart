@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 /// Set of stroke icons used by the floating toolbar. Hand-ported from the
 /// agentation web bundle so the package ships zero asset weight and zero
 /// extra dependencies. All glyphs render into a 24×24 box.
-enum ToolbarIcon { listSparkle, eye, duplicate, trash, settings, close, pencil, plus, sun, moon, help, check, chevronRight }
+enum ToolbarIcon { listSparkle, eye, eyeOff, duplicate, trash, settings, close, pencil, plus, sun, moon, help, check, checkbox, chevronRight }
 
 class ToolbarIconPainter extends CustomPainter {
   final ToolbarIcon icon;
@@ -43,6 +43,9 @@ class ToolbarIconPainter extends CustomPainter {
       case ToolbarIcon.eye:
         _eye(canvas, stroke);
         break;
+      case ToolbarIcon.eyeOff:
+        _eyeOff(canvas, fill, stroke);
+        break;
       case ToolbarIcon.duplicate:
         _duplicate(canvas, stroke);
         break;
@@ -72,6 +75,9 @@ class ToolbarIconPainter extends CustomPainter {
         break;
       case ToolbarIcon.check:
         _check(canvas, stroke);
+        break;
+      case ToolbarIcon.checkbox:
+        _checkbox(canvas, stroke);
         break;
       case ToolbarIcon.chevronRight:
         _chevronRight(canvas, stroke);
@@ -134,6 +140,19 @@ class ToolbarIconPainter extends CustomPainter {
     canvas.drawPath(tick, stroke);
   }
 
+  void _checkbox(Canvas canvas, Paint stroke) {
+    final box = RRect.fromRectAndRadius(
+      const Rect.fromLTRB(4.5, 4.5, 19.5, 19.5),
+      const Radius.circular(3.5),
+    );
+    canvas.drawRRect(box, stroke);
+    final tick = Path()
+      ..moveTo(8.0, 12.0)
+      ..lineTo(11.0, 15.0)
+      ..lineTo(16.0, 9.5);
+    canvas.drawPath(tick, stroke);
+  }
+
   void _listSparkle(Canvas canvas, Paint stroke) {
     // Three left-aligned list lines (varying lengths).
     canvas.drawLine(const Offset(5.5, 6.75), const Offset(18.5, 6.75), stroke);
@@ -176,6 +195,47 @@ class ToolbarIconPainter extends CustomPainter {
       ..cubicTo(9.17391, 13.5608, 10.4392, 14.8261, 12, 14.8261)
       ..close();
     canvas.drawPath(pupil, stroke);
+  }
+
+  void _eyeOff(Canvas canvas, Paint fill, Paint stroke) {
+    // Two filled subpaths form the eye broken across the diagonal slash.
+    final body = Path()..fillType = PathFillType.evenOdd;
+    body
+      ..moveTo(18.6025, 9.28503)
+      ..cubicTo(18.9174, 8.9701, 19.4364, 8.99481, 19.7015, 9.35271)
+      ..cubicTo(20.1484, 9.95606, 20.4943, 10.507, 20.7342, 10.9199)
+      ..cubicTo(21.134, 11.6086, 21.1329, 12.4454, 20.7303, 13.1328)
+      ..cubicTo(20.2144, 14.013, 19.2151, 15.5225, 17.7723, 16.8193)
+      ..cubicTo(16.3293, 18.1162, 14.3852, 19.2497, 12.0008, 19.25)
+      ..cubicTo(11.4192, 19.25, 10.8638, 19.1823, 10.3355, 19.0613)
+      ..cubicTo(9.77966, 18.934, 9.63498, 18.2525, 10.0382, 17.8493)
+      ..cubicTo(10.2412, 17.6463, 10.5374, 17.573, 10.8188, 17.6302)
+      ..cubicTo(11.1993, 17.7076, 11.5935, 17.75, 12.0008, 17.75)
+      ..cubicTo(13.8848, 17.7497, 15.4867, 16.8568, 16.7693, 15.7041)
+      ..cubicTo(18.0522, 14.5511, 18.9606, 13.1867, 19.4363, 12.375)
+      ..cubicTo(19.5656, 12.1543, 19.5659, 11.8943, 19.4373, 11.6729)
+      ..cubicTo(19.2235, 11.3049, 18.921, 10.8242, 18.5364, 10.3003)
+      ..cubicTo(18.3085, 9.98991, 18.3302, 9.5573, 18.6025, 9.28503)
+      ..close();
+    body
+      ..moveTo(12.0008, 4.75)
+      ..cubicTo(12.5814, 4.75006, 13.1358, 4.81803, 13.6632, 4.93953)
+      ..cubicTo(14.2182, 5.06741, 14.362, 5.74812, 13.9593, 6.15091)
+      ..cubicTo(13.7558, 6.35435, 13.4589, 6.42748, 13.1771, 6.36984)
+      ..cubicTo(12.7983, 6.29239, 12.4061, 6.25006, 12.0008, 6.25)
+      ..cubicTo(10.1167, 6.25, 8.51415, 7.15145, 7.23028, 8.31543)
+      ..cubicTo(5.94678, 9.47919, 5.03918, 10.8555, 4.56426, 11.6729)
+      ..cubicTo(4.43551, 11.8945, 4.43582, 12.1542, 4.56524, 12.375)
+      ..cubicTo(4.77587, 12.7343, 5.07189, 13.2012, 5.44718, 13.7105)
+      ..cubicTo(5.67623, 14.0213, 5.65493, 14.4552, 5.38193, 14.7282)
+      ..cubicTo(5.0671, 15.0431, 4.54833, 15.0189, 4.28292, 14.6614)
+      ..cubicTo(3.84652, 14.0736, 3.50813, 13.5369, 3.27129, 13.1328)
+      ..cubicTo(2.86831, 12.4451, 2.86717, 11.6088, 3.26739, 10.9199)
+      ..cubicTo(3.78185, 10.0345, 4.77959, 8.51239, 6.22247, 7.2041)
+      ..cubicTo(7.66547, 5.89584, 9.61202, 4.75, 12.0008, 4.75)
+      ..close();
+    canvas.drawPath(body, fill);
+    canvas.drawLine(const Offset(5, 19), const Offset(19, 5), stroke);
   }
 
   void _duplicate(Canvas canvas, Paint stroke) {
