@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter/widgets.dart';
 
 import 'config.dart';
+import 'select_mode_absorber.dart';
 import 'edits_clipboard.dart';
 import 'select_mode_layer.dart';
 import 'settings_gate.dart';
@@ -32,7 +33,11 @@ class Widgetation extends StatefulWidget {
   /// Optional configuration. See [WidgetationConfig].
   final WidgetationConfig config;
 
-  const Widgetation({super.key, required this.child, this.config = const WidgetationConfig()});
+  const Widgetation({
+    super.key,
+    required this.child,
+    this.config = const WidgetationConfig(),
+  });
 
   @override
   State<Widgetation> createState() => _WidgetationState();
@@ -112,12 +117,14 @@ class _WidgetationState extends State<Widgetation> {
                     // inspector state. Already a RepaintBoundary anchored
                     // by _rootKey.
                     wrapped,
+                    // Swallows pointer events so taps/pans never reach
+                    // the user's app while select mode is on. Mouse-wheel
+                    // and trackpad two-finger pan are forwarded to the
+                    // underlying scrollable manually by SelectModeLayer.
+                    SelectModeAbsorber(active: _ui.selectActive),
                     // Gesture overlay + visual highlights + edits + chat
                     // box. Mounts only when select mode is active. Owns
-                    // its own theme subscription. Uses a translucent
-                    // gesture surface so trackpad pan-zoom and mouse
-                    // wheel reach the user's scrollables; inspector
-                    // tap/drag recognizers still win the gesture arena.
+                    // its own theme subscription.
                     SelectModeLayer(
                       ui: _ui,
                       onHover: _onHover,
@@ -126,6 +133,7 @@ class _WidgetationState extends State<Widgetation> {
                       onPanUpdate: _onPanUpdate,
                       onPanEnd: _onPanEnd,
                       onPanCancel: _onPanCancel,
+                      onScrollAt: _onScrollAt,
                     ),
                     // Toolbar — always mounted; subscribes to theme on
                     // its own, and to EditsStore inside its expanded row.
@@ -271,6 +279,27 @@ class _WidgetationState extends State<Widgetation> {
     _marqueeStart = null;
     _marqueeCurrent = null;
     _ui.marquee.value = null;
+  }
+
+  // Scroll forwarding: the absorber blocks the user's app from receiving
+  // pointer signals or trackpad pan-zoom, so we re-create scrolling by
+  // looking up the deepest Scrollable under [globalPos] and jumping its
+  // position by [delta]. Caller normalises trackpad and wheel deltas to
+  // the same convention (positive dy = scroll content down).
+  void _onScrollAt(Offset globalPos, Offset delta) {
+    final picker = _picker;
+    final root = _root();
+    if (picker == null || root == null) return;
+    final state = picker.findScrollableAt(root, globalPos);
+    if (state == null) return;
+    final pos = state.position;
+    final amount = pos.axis == Axis.vertical ? delta.dy : delta.dx;
+    if (amount == 0) return;
+    final next = (pos.pixels + amount).clamp(
+      pos.minScrollExtent,
+      pos.maxScrollExtent,
+    );
+    pos.jumpTo(next);
   }
 
   void _finishMarquee(Rect marquee, Offset end) {

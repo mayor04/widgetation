@@ -1,4 +1,5 @@
-import 'package:flutter/rendering.dart' show RenderFollowerLayer, RenderTransform;
+import 'package:flutter/rendering.dart'
+    show RenderFollowerLayer, RenderTransform;
 import 'package:flutter/widgets.dart';
 
 import 'tree_node.dart' show TreeNode;
@@ -22,7 +23,8 @@ class WidgetPicker {
       if (ro is RenderBox && ro.attached && ro.hasSize) {
         final origin = ro.localToGlobal(Offset.zero);
         final size = ro.size;
-        final inside = globalPos.dx >= origin.dx &&
+        final inside =
+            globalPos.dx >= origin.dx &&
             globalPos.dy >= origin.dy &&
             globalPos.dx <= origin.dx + size.width &&
             globalPos.dy <= origin.dy + size.height;
@@ -59,6 +61,35 @@ class WidgetPicker {
     return null;
   }
 
+  /// Deepest [Scrollable] whose paint rect contains [globalPos], or
+  /// null when the point is over no scrollable. Used by select mode to
+  /// forward mouse-wheel and trackpad pan-zoom events to the underlying
+  /// app while the inspector absorbs raw pointer input.
+  ScrollableState? findScrollableAt(Element root, Offset globalPos) {
+    ScrollableState? deepest;
+    void visit(Element element) {
+      final ro = element.renderObject;
+      if (ro is RenderBox && ro.attached && ro.hasSize) {
+        final origin = ro.localToGlobal(Offset.zero);
+        final size = ro.size;
+        final inside =
+            globalPos.dx >= origin.dx &&
+            globalPos.dy >= origin.dy &&
+            globalPos.dx <= origin.dx + size.width &&
+            globalPos.dy <= origin.dy + size.height;
+        if (!inside && !_descendantsMayEscape(ro)) return;
+      }
+      if (element.widget is Scrollable && element is StatefulElement) {
+        final state = element.state;
+        if (state is ScrollableState) deepest = state;
+      }
+      element.visitChildren(visit);
+    }
+
+    visit(root);
+    return deepest;
+  }
+
   /// Every non-flutter user widget whose paint rect is at least
   /// [_kCoverageThreshold] covered by [marquee], filtered to top-most
   /// ancestors only (any candidate that has another candidate as an
@@ -77,7 +108,12 @@ class WidgetPicker {
       if (ro is RenderBox && ro.attached && ro.hasSize) {
         final origin = ro.localToGlobal(Offset.zero);
         final size = ro.size;
-        final box = Rect.fromLTWH(origin.dx, origin.dy, size.width, size.height);
+        final box = Rect.fromLTWH(
+          origin.dx,
+          origin.dy,
+          size.width,
+          size.height,
+        );
         if (box.overlaps(marquee)) {
           if (_coverage(box, marquee) >= _kCoverageThreshold) {
             final described = _builder.describeOnly(element, depth);
@@ -102,7 +138,8 @@ class WidgetPicker {
     if (survivors.isEmpty) return const [];
 
     return [
-      for (final s in survivors) _builder.describeWithAncestry(s.element, s.depth),
+      for (final s in survivors)
+        _builder.describeWithAncestry(s.element, s.depth),
     ];
   }
 }

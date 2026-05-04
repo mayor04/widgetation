@@ -19,6 +19,7 @@ class SelectModeLayer extends StatelessWidget {
   final GestureDragUpdateCallback onPanUpdate;
   final GestureDragEndCallback onPanEnd;
   final GestureDragCancelCallback onPanCancel;
+  final void Function(Offset globalPos, Offset delta) onScrollAt;
 
   const SelectModeLayer({
     super.key,
@@ -29,6 +30,7 @@ class SelectModeLayer extends StatelessWidget {
     required this.onPanUpdate,
     required this.onPanEnd,
     required this.onPanCancel,
+    required this.onScrollAt,
   });
 
   @override
@@ -46,52 +48,65 @@ class SelectModeLayer extends StatelessWidget {
                     onHover: (e) => onHover(e.position),
                     onExit: (_) => onHover(null),
                     cursor: SystemMouseCursors.precise,
-                    child: RawGestureDetector(
-                      // Translucent so trackpad pan-zoom and pointer signals
-                      // (mouse wheel) reach scrollables in the user's app
-                      // below. Inspector tap/drag recognizers still win the
-                      // gesture arena because they sit topmost.
-                      behavior: HitTestBehavior.translucent,
-                      gestures: <Type, GestureRecognizerFactory>{
-                        TapGestureRecognizer:
-                            GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
-                          () => TapGestureRecognizer(),
-                          (instance) {
-                            instance.onTapDown = (d) {
-                              onHover(d.globalPosition);
-                            };
-                            instance.onTapUp = (d) {
-                              onTapAt(d.globalPosition);
-                            };
-                            instance.onTapCancel = () {
-                              onHover(null);
-                            };
-                          },
-                        ),
-                        // Restrict marquee pan to physical drag devices.
-                        // Two-finger trackpad scroll arrives as pan-zoom
-                        // events and would otherwise start a marquee — let
-                        // those fall through to the underlying scrollable.
-                        PanGestureRecognizer:
-                            GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
-                          () => PanGestureRecognizer(
-                            supportedDevices: const {
-                              PointerDeviceKind.mouse,
-                              PointerDeviceKind.touch,
-                              PointerDeviceKind.stylus,
-                              PointerDeviceKind.invertedStylus,
-                              PointerDeviceKind.unknown,
-                            },
-                          ),
-                          (instance) {
-                            instance
-                              ..onStart = onPanStart
-                              ..onUpdate = onPanUpdate
-                              ..onEnd = onPanEnd
-                              ..onCancel = onPanCancel;
-                          },
-                        ),
+                    child: Listener(
+                      // Forward mouse-wheel and trackpad two-finger pan to
+                      // the underlying scrollable. The absorber below blocks
+                      // the user app from receiving these directly; we walk
+                      // its element tree to scroll the right widget.
+                      // scrollDelta is already wheel-down-positive; pan-zoom
+                      // panDelta is finger-direction, so negate it to match.
+                      onPointerSignal: (event) {
+                        if (event is PointerScrollEvent) {
+                          onScrollAt(event.position, event.scrollDelta);
+                        }
                       },
+                      onPointerPanZoomUpdate: (event) {
+                        onScrollAt(event.position, -event.panDelta);
+                      },
+                      child: RawGestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        gestures: <Type, GestureRecognizerFactory>{
+                          TapGestureRecognizer:
+                              GestureRecognizerFactoryWithHandlers<
+                                TapGestureRecognizer
+                              >(() => TapGestureRecognizer(), (instance) {
+                                instance.onTapDown = (d) {
+                                  onHover(d.globalPosition);
+                                };
+                                instance.onTapUp = (d) {
+                                  onTapAt(d.globalPosition);
+                                };
+                                instance.onTapCancel = () {
+                                  onHover(null);
+                                };
+                              }),
+                          // Restrict marquee pan to physical drag devices.
+                          // Two-finger trackpad scroll arrives as pan-zoom
+                          // events and would otherwise start a marquee — let
+                          // those fall through to the underlying scrollable.
+                          PanGestureRecognizer:
+                              GestureRecognizerFactoryWithHandlers<
+                                PanGestureRecognizer
+                              >(
+                                () => PanGestureRecognizer(
+                                  supportedDevices: const {
+                                    PointerDeviceKind.mouse,
+                                    PointerDeviceKind.touch,
+                                    PointerDeviceKind.stylus,
+                                    PointerDeviceKind.invertedStylus,
+                                    PointerDeviceKind.unknown,
+                                  },
+                                ),
+                                (instance) {
+                                  instance
+                                    ..onStart = onPanStart
+                                    ..onUpdate = onPanUpdate
+                                    ..onEnd = onPanEnd
+                                    ..onCancel = onPanCancel;
+                                },
+                              ),
+                        },
+                      ),
                     ),
                   ),
                 ),
