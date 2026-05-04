@@ -6,7 +6,7 @@ import '../tree_node.dart';
 /// property (e.g. `data` or `text`), append a quoted excerpt:
 /// `Text "How you use it"`. Long strings are truncated.
 String formatNodeLabel(TreeNode node) {
-  final base = node.nearestWidget?.isEmpty ?? false ? '' : '${node.nearestWidget!}';
+  final base = node.nearestWidget?.isEmpty ?? false ? '' : node.nearestWidget!;
   final text = _extractText(node);
   if (text == null) return '$base(${node.type})';
   final trimmed = text.length > 32 ? '${text.substring(0, 32)}…' : text;

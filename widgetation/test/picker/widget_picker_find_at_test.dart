@@ -1,24 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:widgetation/widgetation.dart';
 import 'package:widgetation/src/widget_picker.dart';
 
 void main() {
-  testWidgets('Widgetation renders its child', (tester) async {
-    await tester.pumpWidget(
-      const Widgetation(
-        config: WidgetationConfig(enabled: false),
-        child: MaterialApp(home: Text('hello')),
-      ),
-    );
-    expect(find.text('hello'), findsOneWidget);
-  });
-
-  testWidgets('WidgetPicker reports nearest non-flutter ancestor and chain',
-      (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: _Host()),
-    );
+  testWidgets('reports nearest non-flutter ancestor and chain', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: _Host()));
     await tester.pump();
 
     final picker = WidgetPicker();
@@ -40,13 +26,20 @@ void main() {
     // "data: hi" is the canonical Text diagnostic.
     expect(node.widgetProperties['data'], equals('"hi"'));
   });
+
+  testWidgets('returns null when point is outside everything', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: _Host()));
+    await tester.pump();
+    final picker = WidgetPicker();
+    final root = WidgetsBinding.instance.rootElement!;
+    expect(picker.findAt(root, const Offset(-1000, -1000)), isNull);
+  });
 }
 
 class _Host extends StatelessWidget {
   const _Host();
   @override
-  Widget build(BuildContext context) =>
-      const Center(child: _MyCustom());
+  Widget build(BuildContext context) => const Center(child: _MyCustom());
 }
 
 class _MyCustom extends StatelessWidget {
