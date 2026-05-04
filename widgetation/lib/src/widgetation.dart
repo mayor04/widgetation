@@ -8,11 +8,13 @@ import 'config.dart';
 import 'edits/edit_label.dart';
 import 'edits/edits_layer.dart';
 import 'frame_capturer.dart';
+import 'marquee_overlay.dart';
 import 'select_mode_overlay.dart';
 import 'state/edits_store.dart';
 import 'state/hover_store.dart';
 import 'state/preferences_store.dart';
 import 'state/selection_store.dart';
+import 'state/ui_state_store.dart';
 import 'state/widgetation_store.dart';
 import 'streaming_server.dart';
 import 'theme.dart';
@@ -53,8 +55,9 @@ class _WidgetationState extends State<Widgetation> {
   bool _busy = false;
 
   WidgetPicker? _picker;
-  bool _selectActive = false;
-  bool _settingsOpen = false;
+
+  // Plain non-state fields used by the marquee handlers; the live rect
+  // flows through _ui.marquee instead of triggering setState.
   Offset? _marqueeStart;
   Offset? _marqueeCurrent;
 
@@ -62,6 +65,7 @@ class _WidgetationState extends State<Widgetation> {
   HoverStore? _hover;
   EditsStore? _edits;
   PreferencesStore? _prefs;
+  final UiStateStore _ui = UiStateStore();
 
   @override
   void initState() {
@@ -142,6 +146,7 @@ class _WidgetationState extends State<Widgetation> {
     _hover?.dispose();
     _edits?.dispose();
     _prefs?.dispose();
+    _ui.dispose();
     super.dispose();
   }
 
@@ -157,6 +162,10 @@ class _WidgetationState extends State<Widgetation> {
     // MediaQuery in scope yet — provide both ourselves so the overlay
     // (Stack default-aligns AlignmentDirectional, SafeArea reads padding)
     // works regardless of how the user wires their app.
+    //
+    // The build runs once on mount: every interactive piece of state lives
+    // in a ValueNotifier (UiStateStore) or a WidgetationStore further down
+    // and is consumed by a leaf widget that subscribes only to itself.
     return Directionality(
       textDirection: TextDirection.ltr,
       child: MediaQuery.fromView(
@@ -169,73 +178,55 @@ class _WidgetationState extends State<Widgetation> {
               store: _hover!,
               child: StoreScope<EditsStore>(
                 store: _edits!,
-                child: StoreBuilder<PreferencesStore, PreferencesState>(
-                  builder: (context, prefs) {
-                    final base = prefs.themeMode == WidgetationThemeMode.light
-                        ? kWidgetationLightTheme
-                        : kWidgetationDarkTheme;
-                    final theme = base.withAccent(prefs.markerColor);
-                    return WidgetationTheme(
-                      data: theme,
-                      child: Stack(
-                        children: [
-                          // User app. While select mode is active it stops
-                          // receiving any pointer events — taps and pans
-                          // are claimed by our overlay so the inspector
-                          // can pick widgets and draw a marquee instead
-                          // of forwarding to the underlying scrollables.
-                          IgnorePointer(ignoring: _selectActive, child: wrapped),
-                          if (_selectActive)
-                            Positioned.fill(
-                              child: MouseRegion(
-                                onHover: (e) => _onHover(e.position),
-                                onExit: (_) => _onHover(null),
-                                cursor: SystemMouseCursors.precise,
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTapDown: (d) => _onHover(d.globalPosition),
-                                  onTapUp: (d) => _onTapAt(d.globalPosition),
-                                  onTapCancel: () => _onHover(null),
-                                  onPanStart: _onPanStart,
-                                  onPanUpdate: _onPanUpdate,
-                                  onPanEnd: _onPanEnd,
-                                  onPanCancel: _onPanCancel,
-                                ),
-                              ),
-                            ),
-                          if (_selectActive && _marqueeRect != null)
-                            Positioned.fill(
-                              child: IgnorePointer(
-                                child: CustomPaint(
-                                  painter: _MarqueePainter(_marqueeRect!),
-                                ),
-                              ),
-                            ),
-                          if (_selectActive) const SelectionHighlights(),
-                          if (_selectActive) const SelectionInfoChip(),
-                          if (_selectActive) const EditsLayer(),
-                          WidgetationToolbar(
-                            alignment: cfg.selectButtonAlignment,
-                            config: cfg,
-                            serverRunning: _server != null,
-                            viewerConnected: _server?.hasViewer ?? false,
-                            onCopyEdits: _copyAllEdits,
-                            onDeleteEdits: _deleteAllEdits,
-                            onToggleEditsHidden: _toggleEditsHidden,
-                            onToggleSettings: _toggleSettings,
-                            onExpandedChanged: _setSelectActive,
-                          ),
-                          if (_settingsOpen)
-                            ToolbarStatusPopup(
-                              config: cfg,
-                              serverRunning: _server != null,
-                              viewerConnected: _server?.hasViewer ?? false,
-                              onDismiss: _closeSettings,
-                            ),
-                        ],
+                child: Stack(
+                  children: [
+                    // User app — stable sibling, never re-rendered by
+                    // inspector state. Already a RepaintBoundary anchored
+                    // by _captureKey.
+                    wrapped,
+                    // Swallows pointer events while select mode is on so
+                    // taps and pans go to the inspector overlay instead
+                    // of the user's scrollables. Sits above the user app
+                    // and below the gesture overlay in the Stack.
+                    _SelectModeAbsorber(active: _ui.selectActive),
+                    // Gesture overlay + visual highlights + edits + chat
+                    // box. Mounts only when select mode is active. Owns
+                    // its own theme subscription.
+                    _SelectModeOverlays(
+                      ui: _ui,
+                      onHover: _onHover,
+                      onTapAt: _onTapAt,
+                      onPanStart: _onPanStart,
+                      onPanUpdate: _onPanUpdate,
+                      onPanEnd: _onPanEnd,
+                      onPanCancel: _onPanCancel,
+                    ),
+                    // Toolbar — always mounted; subscribes to theme on
+                    // its own, and to EditsStore inside its expanded row.
+                    _ThemedHost(
+                      child: RepaintBoundary(
+                        child: WidgetationToolbar(
+                          alignment: cfg.selectButtonAlignment,
+                          config: cfg,
+                          serverRunning: _server != null,
+                          viewerConnected: _server?.hasViewer ?? false,
+                          onCopyEdits: _copyAllEdits,
+                          onDeleteEdits: _deleteAllEdits,
+                          onToggleEditsHidden: _toggleEditsHidden,
+                          onToggleSettings: _toggleSettings,
+                          onExpandedChanged: _setSelectActive,
+                        ),
                       ),
-                    );
-                  },
+                    ),
+                    // Settings popup — mounts only when settingsOpen.
+                    _SettingsGate(
+                      open: _ui.settingsOpen,
+                      config: cfg,
+                      serverRunning: _server != null,
+                      viewerConnected: _server?.hasViewer ?? false,
+                      onDismiss: _closeSettings,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -246,23 +237,21 @@ class _WidgetationState extends State<Widgetation> {
   }
 
   void _setSelectActive(bool active) {
-    if (_selectActive == active) return;
-    setState(() {
-      _selectActive = active;
-      if (!active) _settingsOpen = false;
-    });
+    if (_ui.selectActive.value == active) return;
+    _ui.selectActive.value = active;
     if (!active) {
+      _ui.settingsOpen.value = false;
       _selection?.clear();
       _hover?.clear();
       _edits?.cancelDraft();
     }
   }
 
-  void _toggleSettings() => setState(() => _settingsOpen = !_settingsOpen);
+  void _toggleSettings() => _ui.settingsOpen.value = !_ui.settingsOpen.value;
 
   void _closeSettings() {
-    if (!_settingsOpen) return;
-    setState(() => _settingsOpen = false);
+    if (!_ui.settingsOpen.value) return;
+    _ui.settingsOpen.value = false;
   }
 
   void _copyAllEdits() {
@@ -305,10 +294,12 @@ class _WidgetationState extends State<Widgetation> {
     if (picker == null || root == null) return;
     // While a chat box with typed text is open, tapping a different
     // widget just nudges it — selection is locked until they Cancel or
-    // Add. An empty draft is fair game to discard and re-anchor.
+    // Add. An empty draft is fair game to discard and re-anchor. The
+    // chat box owns the in-flight text via its own controller; it
+    // publishes a hasDraftText signal we read here.
     final draft = _edits?.value.draft;
     if (draft != null) {
-      if (draft.text.trim().isNotEmpty) {
+      if (_edits?.hasDraftText.value ?? false) {
         _edits?.shake();
         return;
       }
@@ -326,53 +317,45 @@ class _WidgetationState extends State<Widgetation> {
     }
   }
 
-  Rect? get _marqueeRect {
-    final a = _marqueeStart;
-    final b = _marqueeCurrent;
-    if (a == null || b == null) return null;
-    return Rect.fromPoints(a, b);
-  }
-
   void _onPanStart(DragStartDetails d) {
     // Mid-draft pan with typed text should nudge; an empty draft is
     // discarded so the marquee can begin.
     final draft = _edits?.value.draft;
     if (draft != null) {
-      if (draft.text.trim().isNotEmpty) {
+      if (_edits?.hasDraftText.value ?? false) {
         _edits?.shake();
         return;
       }
       _edits?.cancelDraft();
     }
-    setState(() {
-      _marqueeStart = d.globalPosition;
-      _marqueeCurrent = d.globalPosition;
-    });
+    _marqueeStart = d.globalPosition;
+    _marqueeCurrent = d.globalPosition;
+    _ui.marquee.value = Rect.fromPoints(d.globalPosition, d.globalPosition);
     _hover?.clear();
   }
 
   void _onPanUpdate(DragUpdateDetails d) {
-    if (_marqueeStart == null) return;
-    setState(() => _marqueeCurrent = d.globalPosition);
+    final start = _marqueeStart;
+    if (start == null) return;
+    _marqueeCurrent = d.globalPosition;
+    _ui.marquee.value = Rect.fromPoints(start, d.globalPosition);
   }
 
   void _onPanEnd(DragEndDetails d) {
     final start = _marqueeStart;
     final end = _marqueeCurrent;
-    setState(() {
-      _marqueeStart = null;
-      _marqueeCurrent = null;
-    });
+    _marqueeStart = null;
+    _marqueeCurrent = null;
+    _ui.marquee.value = null;
     if (start == null || end == null) return;
     _finishMarquee(Rect.fromPoints(start, end), end);
   }
 
   void _onPanCancel() {
     if (_marqueeStart == null) return;
-    setState(() {
-      _marqueeStart = null;
-      _marqueeCurrent = null;
-    });
+    _marqueeStart = null;
+    _marqueeCurrent = null;
+    _ui.marquee.value = null;
   }
 
   void _finishMarquee(Rect marquee, Offset end) {
@@ -398,27 +381,159 @@ class _WidgetationState extends State<Widgetation> {
   }
 }
 
-class _MarqueePainter extends CustomPainter {
-  static const Color _green = Color(0xFF00C853);
-  static const Color _greenFill = Color(0x3300C853);
+/// Rebuilds only when `selectActive` flips. Mounts a full-screen
+/// `AbsorbPointer` so taps and pans don't reach the user's app while
+/// the inspector owns input.
+class _SelectModeAbsorber extends StatelessWidget {
+  final ValueListenable<bool> active;
 
-  final Rect rect;
-  _MarqueePainter(this.rect);
+  const _SelectModeAbsorber({required this.active});
 
   @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(rect, Paint()..color = _greenFill);
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = _green,
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: active,
+      builder: (context, on, _) {
+        if (!on) return const SizedBox.shrink();
+        return const Positioned.fill(
+          child: RepaintBoundary(
+            child: AbsorbPointer(child: SizedBox.expand()),
+          ),
+        );
+      },
     );
   }
+}
+
+/// Inspector visuals: gesture overlay, marquee paint, selection highlights,
+/// info chip, edits layer. Mounts only while `selectActive` is true and
+/// hosts its own [WidgetationTheme] consumer so theme changes don't
+/// invalidate widgets above.
+class _SelectModeOverlays extends StatelessWidget {
+  final UiStateStore ui;
+  final void Function(Offset?) onHover;
+  final void Function(Offset) onTapAt;
+  final GestureDragStartCallback onPanStart;
+  final GestureDragUpdateCallback onPanUpdate;
+  final GestureDragEndCallback onPanEnd;
+  final GestureDragCancelCallback onPanCancel;
+
+  const _SelectModeOverlays({
+    required this.ui,
+    required this.onHover,
+    required this.onTapAt,
+    required this.onPanStart,
+    required this.onPanUpdate,
+    required this.onPanEnd,
+    required this.onPanCancel,
+  });
 
   @override
-  bool shouldRepaint(covariant _MarqueePainter old) => old.rect != rect;
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: ui.selectActive,
+      builder: (context, on, _) {
+        if (!on) return const SizedBox.shrink();
+        return _ThemedHost(
+          child: RepaintBoundary(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: MouseRegion(
+                    onHover: (e) => onHover(e.position),
+                    onExit: (_) => onHover(null),
+                    cursor: SystemMouseCursors.precise,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTapDown: (d) => onHover(d.globalPosition),
+                      onTapUp: (d) => onTapAt(d.globalPosition),
+                      onTapCancel: () => onHover(null),
+                      onPanStart: onPanStart,
+                      onPanUpdate: onPanUpdate,
+                      onPanEnd: onPanEnd,
+                      onPanCancel: onPanCancel,
+                    ),
+                  ),
+                ),
+                MarqueeOverlay(rect: ui.marquee),
+                // Each of these returns a Positioned.fill / Positioned
+                // internally, so they must be DIRECT children of the Stack
+                // (Positioned applies parent data to its render-tree child
+                // and requires the render parent to be a RenderStack — a
+                // wrapping RepaintBoundary would break that). Each widget
+                // wraps its own contents in a RepaintBoundary internally.
+                const SelectionHighlights(),
+                const SelectionInfoChip(),
+                const EditsLayer(),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Mounts the settings popup only while `open` is true. Hosts its own
+/// theme consumer so opening/closing it doesn't ripple to the toolbar
+/// or the select-mode overlay.
+class _SettingsGate extends StatelessWidget {
+  final ValueListenable<bool> open;
+  final WidgetationConfig config;
+  final bool serverRunning;
+  final bool viewerConnected;
+  final VoidCallback onDismiss;
+
+  const _SettingsGate({
+    required this.open,
+    required this.config,
+    required this.serverRunning,
+    required this.viewerConnected,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: open,
+      builder: (context, isOpen, _) {
+        if (!isOpen) return const SizedBox.shrink();
+        return _ThemedHost(
+          child: RepaintBoundary(
+            child: ToolbarStatusPopup(
+              config: config,
+              serverRunning: serverRunning,
+              viewerConnected: viewerConnected,
+              onDismiss: onDismiss,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Subscribes to [PreferencesStore] and republishes the resulting
+/// [WidgetationThemeData] via [WidgetationTheme]. Scoped per consumer
+/// so theme changes don't bubble through the entire widget tree — only
+/// the subtree below this host rebuilds.
+class _ThemedHost extends StatelessWidget {
+  final Widget child;
+
+  const _ThemedHost({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return StoreBuilder<PreferencesStore, PreferencesState>(
+      builder: (context, prefs) {
+        final base = prefs.themeMode == WidgetationThemeMode.light
+            ? kWidgetationLightTheme
+            : kWidgetationDarkTheme;
+        final theme = base.withAccent(prefs.markerColor);
+        return WidgetationTheme(data: theme, child: child);
+      },
+    );
+  }
 }
 
 String _formatEditsForClipboard(List<Edit> edits) {

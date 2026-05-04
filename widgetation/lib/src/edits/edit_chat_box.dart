@@ -33,6 +33,8 @@ class _EditChatBoxState extends State<EditChatBox>
   late final FocusNode _focus;
   late final AnimationController _shakeCtrl;
 
+  EditsStore? _store;
+
   @override
   void initState() {
     super.initState();
@@ -42,9 +44,17 @@ class _EditChatBoxState extends State<EditChatBox>
       vsync: this,
       duration: const Duration(milliseconds: 320),
     );
+    _ctrl.addListener(_publishHasText);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focus.requestFocus();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _store = context.read<EditsStore>();
+    _publishHasText();
   }
 
   @override
@@ -62,17 +72,23 @@ class _EditChatBoxState extends State<EditChatBox>
 
   @override
   void dispose() {
+    _ctrl.removeListener(_publishHasText);
+    _store?.setHasDraftText(false);
     _ctrl.dispose();
     _focus.dispose();
     _shakeCtrl.dispose();
     super.dispose();
   }
 
-  void _commit() => context.read<EditsStore>().commitDraft();
-  void _cancel() => context.read<EditsStore>().cancelDraft();
+  void _publishHasText() {
+    _store?.setHasDraftText(_ctrl.text.trim().isNotEmpty);
+  }
+
+  void _commit() => _store?.commitDraft(_ctrl.text);
+  void _cancel() => _store?.cancelDraft();
   void _delete() {
     final id = widget.draft.editingId;
-    if (id != null) context.read<EditsStore>().delete(id);
+    if (id != null) _store?.delete(id);
   }
 
   @override
@@ -119,8 +135,6 @@ class _EditChatBoxState extends State<EditChatBox>
                 _TextInput(
                   controller: _ctrl,
                   focusNode: _focus,
-                  onChanged: (v) =>
-                      context.read<EditsStore>().updateDraftText(v),
                   onSubmitted: (_) => _commit(),
                 ),
                 const SizedBox(height: 8),
@@ -180,13 +194,11 @@ class _Header extends StatelessWidget {
 class _TextInput extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
-  final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
 
   const _TextInput({
     required this.controller,
     required this.focusNode,
-    required this.onChanged,
     required this.onSubmitted,
   });
 
@@ -222,7 +234,6 @@ class _TextInput extends StatelessWidget {
             backgroundCursorColor: theme.onSurfaceMuted,
             textAlign: TextAlign.start,
             maxLines: 1,
-            onChanged: onChanged,
             onSubmitted: onSubmitted,
           ),
         ],

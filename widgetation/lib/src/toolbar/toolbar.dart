@@ -153,11 +153,13 @@ class _WidgetationToolbarState extends State<WidgetationToolbar>
                         maxHeight: _expandedHeight,
                         child: IgnorePointer(
                           ignoring: ft < 0.6,
-                          child: StoreBuilder<EditsStore, EditsState>(
-                            builder: (context, edits) => _ControlsRow(
+                          child: ValueListenableBuilder<EditsListSlice>(
+                            valueListenable:
+                                StoreScope.of<EditsStore>(context).list,
+                            builder: (context, slice, _) => _ControlsRow(
                               t: ft,
-                              hidden: edits.hidden,
-                              hasEdits: edits.edits.isNotEmpty,
+                              hidden: slice.hidden,
+                              hasEdits: slice.edits.isNotEmpty,
                               onToggleHidden: widget.onToggleEditsHidden,
                               onCopy: widget.onCopyEdits,
                               onDelete: widget.onDeleteEdits,

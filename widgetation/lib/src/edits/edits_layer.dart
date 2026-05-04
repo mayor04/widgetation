@@ -13,30 +13,54 @@ import 'edit_index_bubble.dart';
 /// this layer don't capture pointer events — taps fall through to the
 /// underlying select-mode gesture layer (which calls [EditsStore.shake]
 /// when a draft is open instead of moving the selection).
+///
+/// The bubbles list and the active draft are observed independently so
+/// opening or shaking the chat box never re-iterates the bubbles, and
+/// committing/deleting an edit never disturbs the chat box.
 class EditsLayer extends StatelessWidget {
   const EditsLayer({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final store = StoreScope.of<EditsStore>(context);
     return Positioned.fill(
-      child: StoreBuilder<EditsStore, EditsState>(
-        builder: (context, state) {
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              if (!state.hidden)
-                for (final edit in state.edits)
-                  EditIndexBubble(key: ValueKey(edit.id), edit: edit),
-              if (state.draft != null && !state.draft!.isEditing)
-                _DraftPlusBubble(cursor: state.draft!.cursor),
-              if (state.draft != null)
-                EditChatBox(
-                  key: ValueKey('chatbox:${state.draft!.editingId ?? '__new__'}'),
-                  draft: state.draft!,
-                ),
-            ],
-          );
-        },
+      child: RepaintBoundary(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ValueListenableBuilder<EditsListSlice>(
+              valueListenable: store.list,
+              builder: (context, slice, _) {
+                if (slice.hidden || slice.edits.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (final edit in slice.edits)
+                      EditIndexBubble(key: ValueKey(edit.id), edit: edit),
+                  ],
+                );
+              },
+            ),
+            ValueListenableBuilder<EditDraft?>(
+              valueListenable: store.draft,
+              builder: (context, draft, _) {
+                if (draft == null) return const SizedBox.shrink();
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    if (!draft.isEditing) _DraftPlusBubble(cursor: draft.cursor),
+                    EditChatBox(
+                      key: ValueKey('chatbox:${draft.editingId ?? '__new__'}'),
+                      draft: draft,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

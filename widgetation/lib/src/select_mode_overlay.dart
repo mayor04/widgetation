@@ -18,22 +18,26 @@ class SelectionHighlights extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = WidgetationTheme.of(context).accent;
+    final editsStore = StoreScope.of<EditsStore>(context);
     return StoreBuilder<SelectionStore, SelectionState>(
       builder: (context, selection) {
         return StoreBuilder<HoverStore, HoverState>(
           builder: (context, hover) {
-            return StoreBuilder<EditsStore, EditsState>(
-              builder: (context, edits) {
+            return ValueListenableBuilder<EditDraft?>(
+              valueListenable: editsStore.draft,
+              builder: (context, draft, _) {
                 return Positioned.fill(
                   child: IgnorePointer(
-                    child: CustomPaint(
-                      painter: _SelectionPainter(
-                        hover: hover.node,
-                        selected: selection.primary,
-                        unionRect: _resolveUnionRect(edits, selection),
-                        accent: accent,
+                    child: RepaintBoundary(
+                      child: CustomPaint(
+                        painter: _SelectionPainter(
+                          hover: hover.node,
+                          selected: selection.primary,
+                          unionRect: _resolveUnionRect(draft, selection),
+                          accent: accent,
+                        ),
+                        child: const SizedBox.expand(),
                       ),
-                      child: const SizedBox.expand(),
                     ),
                   ),
                 );
@@ -49,8 +53,8 @@ class SelectionHighlights extends StatelessWidget {
   // restored when re-opening a multi-node edit). Fall back to a computed
   // union when SelectionStore holds multiple nodes but no draft is open
   // (e.g. just after committing a marquee edit).
-  static Rect? _resolveUnionRect(EditsState edits, SelectionState selection) {
-    final fromDraft = edits.draft?.selectRect;
+  static Rect? _resolveUnionRect(EditDraft? draft, SelectionState selection) {
+    final fromDraft = draft?.selectRect;
     if (fromDraft != null) return fromDraft;
     if (selection.nodes.length < 2) return null;
     Rect? acc;
@@ -126,51 +130,62 @@ class SelectionInfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StoreBuilder<SelectionStore, SelectionState>(
-      builder: (context, selection) {
-        return StoreBuilder<HoverStore, HoverState>(
-          builder: (context, hover) {
-            final hit = hover.node;
-            if (hit == null || hit == selection.primary) {
-              return const SizedBox.shrink();
-            }
-            final cursor = hover.cursor;
-            final double left;
-            final double top;
-            if (cursor != null) {
-              left = (cursor.dx + 12).clamp(0.0, double.infinity);
-              top = (cursor.dy - 28).clamp(0.0, double.infinity);
-            } else {
-              left = hit.rect.x;
-              top = (hit.rect.y - 24).clamp(0.0, double.infinity);
-            }
-            final theme = WidgetationTheme.of(context);
-            return Positioned(
-              left: left,
-              top: top,
-              child: IgnorePointer(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: theme.surfaceElevated,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    hit.type,
-                    style: const TextStyle(
-                      color: Color(0xFFFFFFFF),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+    // Always Positioned.fill so this is a positioned child of the parent
+    // Stack regardless of whether a chip is showing. The chip itself is
+    // rendered via a nested Positioned inside the fill area.
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: StoreBuilder<SelectionStore, SelectionState>(
+          builder: (context, selection) {
+            return StoreBuilder<HoverStore, HoverState>(
+              builder: (context, hover) {
+                final hit = hover.node;
+                if (hit == null || hit == selection.primary) {
+                  return const SizedBox.shrink();
+                }
+                final cursor = hover.cursor;
+                final double left;
+                final double top;
+                if (cursor != null) {
+                  left = (cursor.dx + 12).clamp(0.0, double.infinity);
+                  top = (cursor.dy - 28).clamp(0.0, double.infinity);
+                } else {
+                  left = hit.rect.x;
+                  top = (hit.rect.y - 24).clamp(0.0, double.infinity);
+                }
+                final theme = WidgetationTheme.of(context);
+                return Stack(
+                  children: [
+                    Positioned(
+                      left: left,
+                      top: top,
+                      child: RepaintBoundary(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: theme.surfaceElevated,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            hit.type,
+                            style: const TextStyle(
+                              color: Color(0xFFFFFFFF),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textDirection: TextDirection.ltr,
+                          ),
+                        ),
+                      ),
                     ),
-                    textDirection: TextDirection.ltr,
-                  ),
-                ),
-              ),
+                  ],
+                );
+              },
             );
           },
-        );
-      },
+        ),
+      ),
     );
   }
 }
