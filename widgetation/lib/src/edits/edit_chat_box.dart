@@ -312,12 +312,40 @@ class _StylesBlock extends StatelessWidget {
   }
 }
 
-class _TextInput extends StatelessWidget {
+class _TextInput extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onSubmitted;
 
-  const _TextInput({required this.controller, required this.focusNode, required this.onSubmitted});
+  const _TextInput({
+    required this.controller,
+    required this.focusNode,
+    required this.onSubmitted,
+  });
+
+  @override
+  State<_TextInput> createState() => _TextInputState();
+}
+
+class _TextInputState extends State<_TextInput>
+    implements TextSelectionGestureDetectorBuilderDelegate {
+  final GlobalKey<EditableTextState> _editableKey = GlobalKey<EditableTextState>();
+  late final TextSelectionGestureDetectorBuilder _selectionBuilder;
+
+  @override
+  GlobalKey<EditableTextState> get editableTextKey => _editableKey;
+
+  @override
+  bool get forcePressEnabled => false;
+
+  @override
+  bool get selectionEnabled => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectionBuilder = TextSelectionGestureDetectorBuilder(delegate: this);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -335,29 +363,40 @@ class _TextInput extends StatelessWidget {
           alignment: AlignmentDirectional.topStart,
           children: [
             AnimatedBuilder(
-              animation: controller,
+              animation: widget.controller,
               builder: (context, _) {
-                if (controller.text.isNotEmpty) return const SizedBox.shrink();
-                return Text(
-                  'What should change?',
-                  style: TextStyle(
-                    color: theme.onSurfaceMuted.withValues(alpha: 0.5),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
+                if (widget.controller.text.isNotEmpty) return const SizedBox.shrink();
+                return IgnorePointer(
+                  child: Text(
+                    'What should change?',
+                    style: TextStyle(
+                      color: theme.onSurfaceMuted.withValues(alpha: 0.5),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    textDirection: TextDirection.ltr,
                   ),
-                  textDirection: TextDirection.ltr,
                 );
               },
             ),
-            EditableText(
-              controller: controller,
-              focusNode: focusNode,
-              style: TextStyle(color: theme.onSurface, fontSize: 12),
-              cursorColor: theme.onSurface,
-              backgroundCursorColor: theme.onSurfaceMuted,
-              textAlign: TextAlign.start,
-              maxLines: null,
-              onSubmitted: onSubmitted,
+            _selectionBuilder.buildGestureDetector(
+              behavior: HitTestBehavior.translucent,
+              child: EditableText(
+                key: _editableKey,
+                controller: widget.controller,
+                focusNode: widget.focusNode,
+                style: TextStyle(color: theme.onSurface, fontSize: 12),
+                cursorColor: theme.onSurface,
+                backgroundCursorColor: theme.onSurfaceMuted,
+                textAlign: TextAlign.start,
+                maxLines: null,
+                onSubmitted: widget.onSubmitted,
+                selectionColor: theme.accent.withValues(alpha: 0.35),
+                enableInteractiveSelection: true,
+                rendererIgnoresPointer: true,
+                showSelectionHandles: false,
+                showCursor: true,
+              ),
             ),
           ],
         ),
