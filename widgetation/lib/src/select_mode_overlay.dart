@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'tree_node.dart' show TreeNode;
+import 'edits/chat_box_position.dart';
 import 'state/edits_store.dart';
 import 'state/hover_store.dart';
 import 'state/selection_store.dart';
@@ -145,36 +146,50 @@ class SelectionInfoChip extends StatelessWidget {
                 if (hit == null || hit == selection.primary) {
                   return const SizedBox.shrink();
                 }
-                final cursor = hover.cursor;
-                final double left;
-                final double top;
-                if (cursor != null) {
-                  left = (cursor.dx + 12).clamp(0.0, double.infinity);
-                  top = (cursor.dy - 28).clamp(0.0, double.infinity);
-                } else {
-                  left = hit.rect.x;
-                  top = (hit.rect.y - 24).clamp(0.0, double.infinity);
-                }
+                const textStyle = TextStyle(
+                  color: Color(0xFFFFFFFF),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                );
+                const padding = EdgeInsets.symmetric(horizontal: 8, vertical: 4);
+                final tp = TextPainter(
+                  text: TextSpan(text: hit.type, style: textStyle),
+                  textDirection: TextDirection.ltr,
+                  maxLines: 1,
+                )..layout();
+                final chipSize = Size(
+                  tp.width + padding.horizontal,
+                  tp.height + padding.vertical,
+                );
+                final media = MediaQuery.of(context);
+                final anchor = hover.cursor ??
+                    Offset(
+                      hit.rect.x + hit.rect.w / 2,
+                      hit.rect.y,
+                    );
+                final pos = chooseChatBoxPosition(
+                  anchor: anchor,
+                  box: chipSize,
+                  screen: media.size,
+                  insets: media.padding + const EdgeInsets.all(8),
+                  gap: 8,
+                );
                 final theme = WidgetationTheme.of(context);
                 return Stack(
                   children: [
                     Positioned(
-                      left: left,
-                      top: top,
+                      left: pos.dx,
+                      top: pos.dy,
                       child: RepaintBoundary(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: padding,
                           decoration: BoxDecoration(
                             color: theme.surfaceElevated,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             hit.type,
-                            style: const TextStyle(
-                              color: Color(0xFFFFFFFF),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: textStyle,
                             textDirection: TextDirection.ltr,
                           ),
                         ),

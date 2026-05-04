@@ -37,6 +37,7 @@ class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin
   late final TextEditingController _ctrl;
   late final FocusNode _focus;
   late final AnimationController _shakeCtrl;
+  late final AnimationController _enterCtrl;
 
   EditsStore? _store;
   SelectionStore? _selection;
@@ -48,6 +49,10 @@ class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin
     _ctrl = TextEditingController(text: widget.draft.text);
     _focus = FocusNode(onKeyEvent: _handleKey);
     _shakeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 320));
+    _enterCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 140),
+    )..forward();
     _ctrl.addListener(_publishHasText);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focus.requestFocus();
@@ -68,6 +73,10 @@ class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin
     if (old.draft.shakeNonce != widget.draft.shakeNonce) {
       _shakeCtrl.forward(from: 0);
     }
+    if (old.draft.cursor != widget.draft.cursor ||
+        !identical(old.draft.nodes, widget.draft.nodes)) {
+      _enterCtrl.forward(from: 0);
+    }
     // Keep controller text in sync on identity swap (e.g. editing flips).
     if (old.draft.editingId != widget.draft.editingId && _ctrl.text != widget.draft.text) {
       _ctrl.text = widget.draft.text;
@@ -81,6 +90,7 @@ class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin
     _ctrl.dispose();
     _focus.dispose();
     _shakeCtrl.dispose();
+    _enterCtrl.dispose();
     super.dispose();
   }
 
@@ -147,10 +157,18 @@ class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin
       left: pos.dx,
       top: pos.dy,
       child: AnimatedBuilder(
-        animation: _shakeCtrl,
+        animation: Listenable.merge([_shakeCtrl, _enterCtrl]),
         builder: (context, child) {
           final dx = math.sin(_shakeCtrl.value * math.pi * 6) * (1 - _shakeCtrl.value) * 10;
-          return Transform.translate(offset: Offset(dx, 0), child: child);
+          final t = Curves.easeOutCubic.transform(_enterCtrl.value);
+          final scale = 0.94 + 0.06 * t;
+          return Opacity(
+            opacity: t,
+            child: Transform.translate(
+              offset: Offset(dx, 0),
+              child: Transform.scale(scale: scale, child: child),
+            ),
+          );
         },
         child: SizedBox(
           width: _collapsedSize.width,
