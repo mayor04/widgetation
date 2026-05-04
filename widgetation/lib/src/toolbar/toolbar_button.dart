@@ -60,8 +60,14 @@ class _ToolbarControlButtonState extends State<ToolbarControlButton> {
             width: 34,
             height: 34,
             decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-            child: CustomPaint(
-              painter: ToolbarIconPainter(icon: widget.icon, color: fg),
+            child: Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CustomPaint(
+                  painter: ToolbarIconPainter(icon: widget.icon, color: fg),
+                ),
+              ),
             ),
           ),
         ),

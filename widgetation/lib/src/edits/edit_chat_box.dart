@@ -100,7 +100,6 @@ class _EditChatBoxState extends State<EditChatBox>
         },
         child: SizedBox(
           width: _boxSize.width,
-          height: _boxSize.height,
           child: Container(
             decoration: BoxDecoration(
               color: theme.surface,
@@ -110,22 +109,21 @@ class _EditChatBoxState extends State<EditChatBox>
                 BoxShadow(blurRadius: 16, offset: const Offset(0, 4), color: theme.shadow),
               ],
             ),
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _Header(label: label),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: _TextInput(
-                    controller: _ctrl,
-                    focusNode: _focus,
-                    onChanged: (v) =>
-                        context.read<EditsStore>().updateDraftText(v),
-                    onSubmitted: (_) => _commit(),
-                  ),
+                const SizedBox(height: 8),
+                _TextInput(
+                  controller: _ctrl,
+                  focusNode: _focus,
+                  onChanged: (v) =>
+                      context.read<EditsStore>().updateDraftText(v),
+                  onSubmitted: (_) => _commit(),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 _Footer(
                   showDelete: widget.draft.isEditing,
                   primaryLabel: widget.draft.isEditing ? 'Save' : 'Add',
@@ -201,7 +199,7 @@ class _TextInput extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: theme.accent, width: 1.4),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       child: Stack(
         alignment: AlignmentDirectional.centerStart,
         children: [
@@ -258,8 +256,8 @@ class _Footer extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onDelete,
             child: SizedBox(
-              width: 32,
-              height: 32,
+              width: 26,
+              height: 26,
               child: CustomPaint(
                 painter: ToolbarIconPainter(
                   icon: ToolbarIcon.trash,
@@ -274,10 +272,10 @@ class _Footer extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onCancel,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: Text(
               'Cancel',
-              style: TextStyle(color: theme.onSurfaceMuted, fontSize: 14, fontWeight: FontWeight.w500),
+              style: TextStyle(color: theme.onSurfaceMuted, fontSize: 13, fontWeight: FontWeight.w500),
               textDirection: TextDirection.ltr,
             ),
           ),
@@ -287,16 +285,16 @@ class _Footer extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onPrimary,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
               color: theme.accent,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
               primaryLabel,
               style: TextStyle(
                 color: theme.onAccent,
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
               textDirection: TextDirection.ltr,

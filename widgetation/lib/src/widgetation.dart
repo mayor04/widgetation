@@ -303,12 +303,16 @@ class _WidgetationState extends State<Widgetation> {
     final picker = _picker;
     final root = _root();
     if (picker == null || root == null) return;
-    // While a chat box is open the user can still hover, but tapping a
-    // different widget just nudges the chat box — selection is locked
-    // until they Cancel or Add.
-    if (_edits?.value.hasOpenDraft ?? false) {
-      _edits?.shake();
-      return;
+    // While a chat box with typed text is open, tapping a different
+    // widget just nudges it — selection is locked until they Cancel or
+    // Add. An empty draft is fair game to discard and re-anchor.
+    final draft = _edits?.value.draft;
+    if (draft != null) {
+      if (draft.text.trim().isNotEmpty) {
+        _edits?.shake();
+        return;
+      }
+      _edits?.cancelDraft();
     }
     final hit = picker.findAt(root, pos);
     _selection?.select(hit);
@@ -330,10 +334,15 @@ class _WidgetationState extends State<Widgetation> {
   }
 
   void _onPanStart(DragStartDetails d) {
-    // Mid-draft pan should nudge the chat box, not start a new marquee.
-    if (_edits?.value.hasOpenDraft ?? false) {
-      _edits?.shake();
-      return;
+    // Mid-draft pan with typed text should nudge; an empty draft is
+    // discarded so the marquee can begin.
+    final draft = _edits?.value.draft;
+    if (draft != null) {
+      if (draft.text.trim().isNotEmpty) {
+        _edits?.shake();
+        return;
+      }
+      _edits?.cancelDraft();
     }
     setState(() {
       _marqueeStart = d.globalPosition;
