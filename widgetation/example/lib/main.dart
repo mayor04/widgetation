@@ -14,7 +14,7 @@ class ExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'widgetation example',
+      title: 'widgetation',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -22,10 +22,13 @@ class ExampleApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.primary,
           surface: AppColors.canvas,
+          primary: AppColors.primary,
         ),
         textTheme: const TextTheme(
-          bodyMedium: AppType.bodyMd,
-          bodySmall: AppType.bodySm,
+          bodyLarge: AppType.body,
+          bodyMedium: AppType.body,
+          bodySmall: AppType.caption,
+          labelLarge: AppType.bodyStrong,
         ),
       ),
       home: const DashboardPage(),

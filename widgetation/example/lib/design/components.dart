@@ -2,143 +2,141 @@ import 'package:flutter/material.dart';
 
 import 'tokens.dart';
 
-/// 4-spoke radial spike — the Anthropic brand mark stand-in.
-class SpikeMark extends StatelessWidget {
+/// Widgetation reticle mark — outer ring + center dot, optional crosshair ticks.
+/// The select-mode glyph rendered as a crisp vector logo.
+class WidgetationMark extends StatelessWidget {
   final double size;
   final Color color;
-  const SpikeMark({super.key, this.size = 16, this.color = AppColors.ink});
+  final bool ticks;
+  const WidgetationMark({super.key, this.size = 16, this.color = AppColors.ink, this.ticks = true});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(painter: _SpikePainter(color)),
+      child: CustomPaint(
+        painter: _ReticlePainter(color: color, ticks: ticks),
+      ),
     );
   }
 }
 
-class _SpikePainter extends CustomPainter {
+class _ReticlePainter extends CustomPainter {
   final Color color;
-  _SpikePainter(this.color);
+  final bool ticks;
+  _ReticlePainter({required this.color, required this.ticks});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
     final cx = size.width / 2;
     final cy = size.height / 2;
-    final long = size.width * 0.5;
-    final wide = size.width * 0.12;
+    final r = size.width / 2;
 
-    // Vertical spike
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(cx, cy), width: wide, height: long * 2),
-        const Radius.circular(1),
-      ),
-      paint,
-    );
-    // Horizontal spike
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(cx, cy), width: long * 2, height: wide),
-        const Radius.circular(1),
-      ),
-      paint,
-    );
+    final ring = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = (size.width * 0.10).clamp(1.0, 2.4)
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(Offset(cx, cy), r * 0.78, ring);
+
+    final dot = Paint()..color = color;
+    canvas.drawCircle(Offset(cx, cy), r * 0.20, dot);
+
+    if (ticks) {
+      final tick = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = (size.width * 0.10).clamp(1.0, 2.4)
+        ..strokeCap = StrokeCap.round;
+      final inner = r * 0.92;
+      final outer = r;
+      canvas.drawLine(Offset(cx, cy - inner), Offset(cx, cy - outer), tick);
+      canvas.drawLine(Offset(cx, cy + inner), Offset(cx, cy + outer), tick);
+      canvas.drawLine(Offset(cx - inner, cy), Offset(cx - outer, cy), tick);
+      canvas.drawLine(Offset(cx + inner, cy), Offset(cx + outer, cy), tick);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _SpikePainter oldDelegate) =>
-      oldDelegate.color != color;
+  bool shouldRepaint(covariant _ReticlePainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.ticks != ticks;
 }
 
-/// Coral primary CTA.
+/// Compact pill primary button — Action Blue, ~28px high.
 class ButtonPrimary extends StatelessWidget {
   final String label;
+  final IconData? icon;
   final VoidCallback? onPressed;
-  const ButtonPrimary({super.key, required this.label, this.onPressed});
+  const ButtonPrimary({super.key, required this.label, this.icon, this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
+    return _PressScale(
+      child: TextButton(
+        onPressed: onPressed ?? () {},
+        style: TextButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.onPrimary,
-          disabledBackgroundColor: AppColors.primaryDisabled,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          textStyle: AppType.button,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+          minimumSize: const Size(0, 28),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+          textStyle: AppType.toolbar.copyWith(color: AppColors.onPrimary),
         ),
-        child: Text(label),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 12, color: AppColors.onPrimary),
+              const SizedBox(width: 5),
+            ],
+            Text(label),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Cream secondary button with hairline outline.
+/// White ghost button with hairline outline.
 class ButtonSecondary extends StatelessWidget {
   final String label;
+  final IconData? icon;
   final VoidCallback? onPressed;
-  const ButtonSecondary({super.key, required this.label, this.onPressed});
+  const ButtonSecondary({super.key, required this.label, this.icon, this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
+    return _PressScale(
+      child: TextButton(
+        onPressed: onPressed ?? () {},
+        style: TextButton.styleFrom(
           backgroundColor: AppColors.canvas,
           foregroundColor: AppColors.ink,
-          side: const BorderSide(color: AppColors.hairline, width: 1),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          minimumSize: const Size(0, 28),
           shape: RoundedRectangleBorder(
+            side: const BorderSide(color: AppColors.hairline, width: 1),
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
-          textStyle: AppType.button,
+          textStyle: AppType.toolbar,
         ),
-        child: Text(label),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 12, color: AppColors.ink),
+              const SizedBox(width: 5),
+            ],
+            Text(label),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Inverted cream button used on coral / dark surfaces.
-class ButtonInverted extends StatelessWidget {
-  final String label;
-  final VoidCallback? onPressed;
-  const ButtonInverted({super.key, required this.label, this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.canvas,
-          foregroundColor: AppColors.ink,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          textStyle: AppType.button,
-        ),
-        child: Text(label),
-      ),
-    );
-  }
-}
-
-/// Inline coral text link.
+/// Inline blue text link.
 class TextLink extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -148,72 +146,52 @@ class TextLink extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onPressed,
+      borderRadius: BorderRadius.circular(AppRadius.xs),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: AppType.bodySm.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(Icons.arrow_forward, size: 14, color: AppColors.primary),
-          ],
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
+        child: Text(label, style: AppType.body.copyWith(color: AppColors.primary)),
       ),
     );
   }
 }
 
-/// Pill badge.
-class BadgePill extends StatelessWidget {
-  final String label;
-  final Color background;
-  final Color foreground;
-  final bool uppercase;
-  const BadgePill({
-    super.key,
-    required this.label,
-    this.background = AppColors.surfaceCard,
-    this.foreground = AppColors.ink,
-    this.uppercase = false,
-  });
+/// Active-press scale(0.96) — desktop-app micro-interaction (subtler than 0.95).
+class _PressScale extends StatefulWidget {
+  final Widget child;
+  const _PressScale({required this.child});
+  @override
+  State<_PressScale> createState() => _PressScaleState();
+}
 
-  factory BadgePill.coral(String label) => BadgePill(
-        label: label,
-        background: AppColors.primary,
-        foreground: AppColors.onPrimary,
-        uppercase: true,
-      );
-
+class _PressScaleState extends State<_PressScale> {
+  bool _down = false;
   @override
   Widget build(BuildContext context) {
-    final base = uppercase ? AppType.captionUppercase : AppType.caption;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
+    return Listener(
+      onPointerDown: (_) => setState(() => _down = true),
+      onPointerUp: (_) => setState(() => _down = false),
+      onPointerCancel: (_) => setState(() => _down = false),
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 80),
+        scale: _down ? 0.96 : 1,
+        child: widget.child,
       ),
-      child: Text(label, style: base.copyWith(color: foreground)),
     );
   }
 }
 
-/// Generic cream feature card.
-class CreamCard extends StatelessWidget {
+/// Inset card with hairline border + 12px radius — the standard panel.
+class Panel extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final Color color;
-  const CreamCard({
+  final BorderRadius? borderRadius;
+  const Panel({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(AppSpacing.xl),
-    this.color = AppColors.surfaceCard,
+    this.padding = const EdgeInsets.all(AppSpacing.lg),
+    this.color = AppColors.canvas,
+    this.borderRadius,
   });
 
   @override
@@ -222,128 +200,24 @@ class CreamCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.hairlineSoft, width: 1),
+        borderRadius: borderRadius ?? BorderRadius.circular(AppRadius.lg),
       ),
       child: child,
     );
   }
 }
 
-/// Dark navy surface card.
-class DarkCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  const DarkCard({
-    super.key,
-    required this.child,
-    this.padding = const EdgeInsets.all(AppSpacing.xl),
-  });
+/// Thin horizontal divider.
+class Hairline extends StatelessWidget {
+  final double indent;
+  const Hairline({super.key, this.indent = 0});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-      ),
-      child: child,
-    );
-  }
-}
-
-/// Cream card with hairline outline (used for pricing tiers).
-class OutlinedCreamCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  const OutlinedCreamCard({
-    super.key,
-    required this.child,
-    this.padding = const EdgeInsets.all(AppSpacing.xl),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: AppColors.canvas,
-        border: Border.all(color: AppColors.hairline, width: 1),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-      ),
-      child: child,
-    );
-  }
-}
-
-/// Section band with consistent vertical padding.
-class SectionBand extends StatelessWidget {
-  final Widget child;
-  final Color color;
-  final double maxWidth;
-  const SectionBand({
-    super.key,
-    required this.child,
-    this.color = AppColors.canvas,
-    this.maxWidth = 1200,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: color,
-      padding: const EdgeInsets.symmetric(
-        vertical: AppSpacing.section,
-        horizontal: AppSpacing.xl,
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-
-/// Section eyebrow (small uppercase label above a heading).
-class SectionEyebrow extends StatelessWidget {
-  final String label;
-  final Color color;
-  const SectionEyebrow({
-    super.key,
-    required this.label,
-    this.color = AppColors.muted,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SpikeMark(size: 12, color: AppColors.primary),
-        const SizedBox(width: 8),
-        Text(
-          label.toUpperCase(),
-          style: AppType.captionUppercase.copyWith(color: color),
-        ),
-      ],
-    );
-  }
-}
-
-/// Status dot (green / amber / coral) used in the connector tiles.
-class StatusDot extends StatelessWidget {
-  final Color color;
-  const StatusDot({super.key, this.color = AppColors.success});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: indent),
+      child: Container(height: 1, color: AppColors.hairlineSoft),
     );
   }
 }

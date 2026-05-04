@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 
 import 'tree_node.dart' show TreeNode;
-import 'edits/chat_box_position.dart';
 import 'state/edits_store.dart';
 import 'state/hover_store.dart';
 import 'state/selection_store.dart';
@@ -167,12 +166,15 @@ class SelectionInfoChip extends StatelessWidget {
                       hit.rect.x + hit.rect.w / 2,
                       hit.rect.y,
                     );
-                final pos = chooseChatBoxPosition(
-                  anchor: anchor,
-                  box: chipSize,
-                  screen: media.size,
-                  insets: media.padding + const EdgeInsets.all(8),
-                  gap: 8,
+                const gap = 8.0;
+                final insets = media.padding + const EdgeInsets.all(8);
+                final maxX = (media.size.width - insets.right - chipSize.width)
+                    .clamp(insets.left, double.infinity);
+                final maxY = (media.size.height - insets.bottom - chipSize.height)
+                    .clamp(insets.top, double.infinity);
+                final pos = Offset(
+                  (anchor.dx + gap).clamp(insets.left, maxX),
+                  (anchor.dy - chipSize.height - gap).clamp(insets.top, maxY),
                 );
                 final theme = WidgetationTheme.of(context);
                 return Stack(

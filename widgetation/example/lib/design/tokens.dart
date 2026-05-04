@@ -1,57 +1,62 @@
 import 'package:flutter/material.dart';
 
-/// Claude.com design tokens — cream + coral + dark navy.
+/// Apple desktop-app design tokens — small, soft, native-mac scale.
+/// Single Action Blue accent, translucent sidebar, hairline dividers.
 class AppColors {
-  // Brand
-  static const primary = Color(0xFFCC785C);
-  static const primaryActive = Color(0xFFA9583E);
-  static const primaryDisabled = Color(0xFFE6DFD8);
-  static const accentTeal = Color(0xFF5DB8A6);
-  static const accentAmber = Color(0xFFE8A55A);
+  // Brand & accent
+  static const primary = Color(0xFF0066CC);
+  static const primaryFocus = Color(0xFF0071E3);
+  static const primaryOnDark = Color(0xFF2997FF);
 
-  // Surfaces
-  static const canvas = Color(0xFFFAF9F5);
-  static const surfaceSoft = Color(0xFFF5F0E8);
-  static const surfaceCard = Color(0xFFEFE9DE);
-  static const surfaceCreamStrong = Color(0xFFE8E0D2);
-  static const surfaceDark = Color(0xFF181715);
-  static const surfaceDarkElevated = Color(0xFF252320);
-  static const surfaceDarkSoft = Color(0xFF1F1E1B);
-  static const hairline = Color(0xFFE6DFD8);
-  static const hairlineSoft = Color(0xFFEBE6DF);
+  // Surface
+  static const canvas = Color(0xFFFFFFFF);
+  static const canvasParchment = Color(0xFFF5F5F7);
+  static const surfacePearl = Color(0xFFFAFAFC);
+  static const sidebar = Color(0xFFE9E9EC);
+  static const sidebarHover = Color(0xFFDDDDE0);
+  static const titlebar = Color(0xFFE8E8EB);
+  static const surfaceTile1 = Color(0xFF272729);
+  static const surfaceTile2 = Color(0xFF2A2A2C);
+  static const surfaceTile3 = Color(0xFF1E1E20);
 
   // Text
-  static const ink = Color(0xFF141413);
-  static const bodyStrong = Color(0xFF252523);
-  static const body = Color(0xFF3D3D3A);
-  static const muted = Color(0xFF6C6A64);
-  static const mutedSoft = Color(0xFF8E8B82);
+  static const ink = Color(0xFF1D1D1F);
+  static const body = Color(0xFF2C2C2E);
+  static const bodyOnDark = Color(0xFFFFFFFF);
+  static const bodyMuted = Color(0xFFCCCCCC);
+  static const inkMuted80 = Color(0xFF333333);
+  static const inkMuted48 = Color(0xFF7A7A7A);
+  static const inkMuted32 = Color(0xFFA1A1A6);
   static const onPrimary = Color(0xFFFFFFFF);
-  static const onDark = Color(0xFFFAF9F5);
-  static const onDarkSoft = Color(0xFFA09D96);
+  static const onDark = Color(0xFFFFFFFF);
 
-  // Semantic
-  static const success = Color(0xFF5DB872);
-  static const warning = Color(0xFFD4A017);
-  static const error = Color(0xFFC64545);
+  // Hairlines
+  static const dividerSoft = Color(0xFFEDEDF0);
+  static const hairline = Color(0xFFD1D1D6);
+  static const hairlineSoft = Color(0xFFE5E5EA);
 
-  // Syntax (for the dark code mockup)
-  static const codeKeyword = Color(0xFFCC785C);
-  static const codeString = Color(0xFFE8A55A);
-  static const codeFunction = Color(0xFF5DB8A6);
-  static const codeComment = Color(0xFF6C6A64);
-  static const codeText = Color(0xFFD9D5CC);
+  // Traffic lights
+  static const trafficClose = Color(0xFFFF5F57);
+  static const trafficMin = Color(0xFFFEBC2E);
+  static const trafficMax = Color(0xFF28C840);
+
+  // Code mockup (dark snippets)
+  static const codePunct = Color(0xFF8E8E93);
+  static const codeKeyword = Color(0xFFFF7AB6);
+  static const codeString = Color(0xFFFD8D3C);
+  static const codeIdent = Color(0xFFA1F0FF);
+  static const codeComment = Color(0xFF7A7A7A);
+  static const codeText = Color(0xFFE6E6E8);
 }
 
 class AppSpacing {
-  static const xxs = 4.0;
-  static const xs = 8.0;
-  static const sm = 12.0;
-  static const md = 16.0;
-  static const lg = 24.0;
-  static const xl = 32.0;
-  static const xxl = 48.0;
-  static const section = 96.0;
+  static const xxs = 2.0;
+  static const xs = 6.0;
+  static const sm = 10.0;
+  static const md = 14.0;
+  static const lg = 20.0;
+  static const xl = 28.0;
+  static const xxl = 40.0;
 }
 
 class AppRadius {
@@ -59,122 +64,140 @@ class AppRadius {
   static const sm = 6.0;
   static const md = 8.0;
   static const lg = 12.0;
-  static const xl = 16.0;
   static const pill = 9999.0;
 }
 
-/// Slab-serif display (Copernicus substitute) + humanist sans body.
+/// SF Pro Text on Apple platforms; system-sans fallback elsewhere.
+/// Small, native-mac scale — body sits at 13px, not 17px.
 class AppType {
-  // Substitute fallbacks: serif → system serif; sans → system sans.
-  static const _serif = 'Georgia';
-  static const _sans = 'Helvetica Neue';
+  static const _display = '.SF Pro Display';
+  static const _text = '.SF Pro Text';
   static const _mono = 'Menlo';
+  static const _fallback = <String>['Helvetica Neue', 'Arial', 'sans-serif'];
 
-  static const displayXl = TextStyle(
-    fontFamily: _serif,
-    fontSize: 64,
-    fontWeight: FontWeight.w400,
-    height: 1.05,
-    letterSpacing: -1.5,
-    color: AppColors.ink,
-  );
-  static const displayLg = TextStyle(
-    fontFamily: _serif,
-    fontSize: 48,
-    fontWeight: FontWeight.w400,
-    height: 1.1,
-    letterSpacing: -1,
-    color: AppColors.ink,
-  );
-  static const displayMd = TextStyle(
-    fontFamily: _serif,
-    fontSize: 36,
-    fontWeight: FontWeight.w400,
-    height: 1.15,
-    letterSpacing: -0.5,
-    color: AppColors.ink,
-  );
-  static const displaySm = TextStyle(
-    fontFamily: _serif,
-    fontSize: 28,
-    fontWeight: FontWeight.w400,
-    height: 1.2,
-    letterSpacing: -0.3,
+  /// Section H1 inside the detail pane (e.g. "Overview").
+  static const titleXl = TextStyle(
+    fontFamily: _display,
+    fontFamilyFallback: _fallback,
+    fontSize: 26,
+    fontWeight: FontWeight.w600,
+    height: 1.18,
+    letterSpacing: -0.4,
     color: AppColors.ink,
   );
 
+  /// Detail pane subtitle.
   static const titleLg = TextStyle(
-    fontFamily: _sans,
-    fontSize: 22,
-    fontWeight: FontWeight.w500,
+    fontFamily: _text,
+    fontFamilyFallback: _fallback,
+    fontSize: 17,
+    fontWeight: FontWeight.w600,
     height: 1.3,
-    color: AppColors.ink,
-  );
-  static const titleMd = TextStyle(
-    fontFamily: _sans,
-    fontSize: 18,
-    fontWeight: FontWeight.w500,
-    height: 1.4,
-    color: AppColors.ink,
-  );
-  static const titleSm = TextStyle(
-    fontFamily: _sans,
-    fontSize: 16,
-    fontWeight: FontWeight.w500,
-    height: 1.4,
+    letterSpacing: -0.2,
     color: AppColors.ink,
   );
 
-  static const bodyMd = TextStyle(
-    fontFamily: _sans,
-    fontSize: 16,
+  /// Card / panel heading.
+  static const titleMd = TextStyle(
+    fontFamily: _text,
+    fontFamilyFallback: _fallback,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    letterSpacing: -0.08,
+    color: AppColors.ink,
+  );
+
+  /// Body text — the default app reading size.
+  static const body = TextStyle(
+    fontFamily: _text,
+    fontFamilyFallback: _fallback,
+    fontSize: 13,
     fontWeight: FontWeight.w400,
-    height: 1.55,
+    height: 1.45,
+    letterSpacing: -0.08,
     color: AppColors.body,
   );
-  static const bodySm = TextStyle(
-    fontFamily: _sans,
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
-    height: 1.55,
-    color: AppColors.body,
+
+  static const bodyStrong = TextStyle(
+    fontFamily: _text,
+    fontFamilyFallback: _fallback,
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    height: 1.4,
+    letterSpacing: -0.08,
+    color: AppColors.ink,
+  );
+
+  /// Sidebar row label.
+  static const sidebar = TextStyle(
+    fontFamily: _text,
+    fontFamilyFallback: _fallback,
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    height: 1.2,
+    letterSpacing: -0.08,
+    color: AppColors.ink,
+  );
+
+  /// Sidebar group header — uppercase tiny.
+  static const sidebarGroup = TextStyle(
+    fontFamily: _text,
+    fontFamilyFallback: _fallback,
+    fontSize: 11,
+    fontWeight: FontWeight.w600,
+    height: 1.2,
+    letterSpacing: 0.6,
+    color: AppColors.inkMuted48,
   );
 
   static const caption = TextStyle(
-    fontFamily: _sans,
-    fontSize: 13,
-    fontWeight: FontWeight.w500,
+    fontFamily: _text,
+    fontFamilyFallback: _fallback,
+    fontSize: 11,
+    fontWeight: FontWeight.w400,
     height: 1.4,
-    color: AppColors.muted,
+    letterSpacing: -0.06,
+    color: AppColors.inkMuted48,
   );
-  static const captionUppercase = TextStyle(
-    fontFamily: _sans,
+
+  static const captionStrong = TextStyle(
+    fontFamily: _text,
+    fontFamilyFallback: _fallback,
+    fontSize: 11,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    letterSpacing: 0.4,
+    color: AppColors.inkMuted80,
+  );
+
+  /// Toolbar button label.
+  static const toolbar = TextStyle(
+    fontFamily: _text,
+    fontFamilyFallback: _fallback,
     fontSize: 12,
     fontWeight: FontWeight.w500,
-    height: 1.4,
-    letterSpacing: 1.5,
-    color: AppColors.muted,
+    height: 1.2,
+    letterSpacing: -0.06,
+    color: AppColors.ink,
+  );
+
+  /// Window title centered in titlebar.
+  static const windowTitle = TextStyle(
+    fontFamily: _text,
+    fontFamilyFallback: _fallback,
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+    height: 1.2,
+    letterSpacing: -0.06,
+    color: AppColors.ink,
   );
 
   static const code = TextStyle(
     fontFamily: _mono,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: FontWeight.w400,
-    height: 1.6,
+    height: 1.55,
     color: AppColors.codeText,
-  );
-
-  static const button = TextStyle(
-    fontFamily: _sans,
-    fontSize: 14,
-    fontWeight: FontWeight.w500,
-    height: 1.0,
-  );
-  static const navLink = TextStyle(
-    fontFamily: _sans,
-    fontSize: 14,
-    fontWeight: FontWeight.w500,
-    height: 1.4,
-    color: AppColors.ink,
   );
 }
