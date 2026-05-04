@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart' show RenderFollowerLayer, RenderTransform;
 import 'package:flutter/widgets.dart';
 
 import 'protocol/tree_node.dart' show TreeNode;
@@ -14,8 +15,7 @@ class WidgetPicker {
   final TreeBuilder _builder;
 
   TreeNode? findAt(Element root, Offset globalPos) {
-    Element? bestElement;
-    int bestDepth = -1;
+    final hits = <_Candidate>[];
 
     void visit(Element element, int depth) {
       final ro = element.renderObject;
@@ -26,26 +26,37 @@ class WidgetPicker {
             globalPos.dy >= origin.dy &&
             globalPos.dx <= origin.dx + size.width &&
             globalPos.dy <= origin.dy + size.height;
-        if (!inside) return;
-        // Cheap filter using the same flutter-file test the builder uses
-        // for ancestry. We still describe the node only after it wins,
-        // so non-flutter screening doesn't run on every passed-over
-        // framework element.
-        if (depth > bestDepth) {
-          final node = _builder.describeOnly(element, depth);
-          if (!isFlutterWidgetFile(node.file)) {
-            bestElement = element;
-            bestDepth = depth;
-          }
+        if (inside) {
+          hits.add(_Candidate(element, depth));
+        } else if (!_descendantsMayEscape(ro)) {
+          // Pruning: most renderers paint descendants within their own
+          // layout rect, so a miss on the parent rules out children. The
+          // exceptions (CompositedTransformFollower, Transform) project
+          // descendants elsewhere via a layer transform — descend anyway.
+          return;
         }
       }
       element.visitChildren((c) => visit(c, depth + 1));
     }
 
     visit(root, 0);
-    final el = bestElement;
-    if (el == null) return null;
-    return _builder.describeWithAncestry(el, bestDepth);
+    if (hits.isEmpty) return null;
+
+    // Iterate in reverse visit order so the topmost-painted widget wins:
+    // DFS preorder matches Flutter's paint order (parents before children,
+    // earlier siblings before later), so the last hit is what the user
+    // sees on top. Sorting by element-tree depth instead would pick a
+    // deeply-nested widget on a page underneath an open dialog/overlay.
+    // describeOnly is the dominant cost; deferring it here means we only
+    // pay for hits we actually evaluate.
+    for (var i = hits.length - 1; i >= 0; i--) {
+      final h = hits[i];
+      final node = _builder.describeOnly(h.element, h.depth);
+      if (!isFlutterWidgetFile(node.file)) {
+        return _builder.describeWithAncestry(h.element, h.depth);
+      }
+    }
+    return null;
   }
 
   /// Every non-flutter user widget whose paint rect is at least
@@ -59,7 +70,7 @@ class WidgetPicker {
   /// so they fail the threshold while the things actually inside the
   /// dragged region pass.
   List<TreeNode> findAllIn(Element root, Rect marquee) {
-    final candidates = <_Candidate>[];
+    final survivors = <_Candidate>[];
 
     void visit(Element element, int depth) {
       final ro = element.renderObject;
@@ -67,43 +78,47 @@ class WidgetPicker {
         final origin = ro.localToGlobal(Offset.zero);
         final size = ro.size;
         final box = Rect.fromLTWH(origin.dx, origin.dy, size.width, size.height);
-        if (!box.overlaps(marquee)) {
-          // RenderBox children paint within the parent's bounds; if we
-          // don't overlap the marquee, descendants can't either.
-          return;
-        }
-        if (_coverage(box, marquee) >= _kCoverageThreshold) {
-          final described = _builder.describeOnly(element, depth);
-          if (!isFlutterWidgetFile(described.file)) {
-            candidates.add(_Candidate(element, depth));
+        if (box.overlaps(marquee)) {
+          if (_coverage(box, marquee) >= _kCoverageThreshold) {
+            final described = _builder.describeOnly(element, depth);
+            if (!isFlutterWidgetFile(described.file)) {
+              survivors.add(_Candidate(element, depth));
+              // Any non-flutter descendant of this element would be dropped
+              // by the topmost-ancestor rule anyway, so don't pay to walk
+              // or describe them.
+              return;
+            }
           }
+        } else if (!_descendantsMayEscape(ro)) {
+          // See findAt: prune on a miss except for layer/transform
+          // renderers whose descendants paint elsewhere.
+          return;
         }
       }
       element.visitChildren((c) => visit(c, depth + 1));
     }
 
     visit(root, 0);
-    if (candidates.isEmpty) return const [];
-
-    final set = {for (final c in candidates) c.element};
-    final survivors = <_Candidate>[];
-    for (final c in candidates) {
-      var hasAncestorInSet = false;
-      c.element.visitAncestorElements((a) {
-        if (set.contains(a)) {
-          hasAncestorInSet = true;
-          return false;
-        }
-        return true;
-      });
-      if (!hasAncestorInSet) survivors.add(c);
-    }
+    if (survivors.isEmpty) return const [];
 
     return [
       for (final s in survivors) _builder.describeWithAncestry(s.element, s.depth),
     ];
   }
 }
+
+/// True when this render object can paint its descendants outside its own
+/// layout rect via a layer transform — i.e. it's not safe to prune the
+/// subtree from a hit-test just because the parent rect missed.
+///
+/// Currently covers `CompositedTransformFollower` (anchored popovers /
+/// menus) and `Transform` (rotated / translated content). Stack with
+/// clipBehavior == Clip.none also overflows, but we don't special-case it
+/// here — overflowing children inside an unclipped Stack are uncommon
+/// outside of animations, and treating Stack as escapable would defeat
+/// most of the prune optimization.
+bool _descendantsMayEscape(RenderBox ro) =>
+    ro is RenderFollowerLayer || ro is RenderTransform;
 
 /// Minimum fraction of a candidate's own area that must lie inside the
 /// marquee for it to qualify. Picked empirically: high enough to reject

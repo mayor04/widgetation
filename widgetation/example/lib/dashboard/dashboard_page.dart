@@ -5,6 +5,7 @@ import '../design/tokens.dart';
 import 'activity_chart.dart';
 import 'connectors_panel.dart';
 import 'conversations_table.dart';
+import 'invite_dialog.dart';
 import 'kpi_row.dart';
 import 'sidebar.dart';
 import 'topbar.dart';
@@ -94,10 +95,16 @@ class _GreetingStrip extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.lg),
         Row(
-          children: const [
-            ButtonSecondary(label: 'Invite teammate'),
-            SizedBox(width: AppSpacing.sm),
-            ButtonPrimary(label: 'Start a chat'),
+          children: [
+            ButtonSecondary(
+              label: 'Invite teammate',
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => const InviteTeammateDialog(),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            const ButtonPrimary(label: 'Start a chat'),
           ],
         ),
       ],

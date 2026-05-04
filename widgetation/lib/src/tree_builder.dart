@@ -48,10 +48,10 @@ class TreeBuilder {
       _describe(element, depth, const <TreeNode>[]);
 
   /// Describe a single element and overlay ancestry metadata: the nearest
-  /// non-flutter ancestor's widget name (or its source file as a fallback)
-  /// plus an outermost-first list of up to 4 type names ending with this
-  /// element's own type. Used by [WidgetPicker] when reporting the picked
-  /// node so an LLM consumer can place it in context without re-walking.
+  /// public, non-flutter ancestor's widget type name plus an outermost-first
+  /// list of up to 4 type names ending with this element's own type. Used by
+  /// [WidgetPicker] when reporting the picked node so an LLM consumer can
+  /// place it in context without re-walking.
   TreeNode describeWithAncestry(Element element, int depth) {
     final base = _describe(element, depth, const <TreeNode>[]);
 
@@ -69,9 +69,7 @@ class TreeBuilder {
       if (nearest == null) {
         final file = _creationFile(widget);
         if (!isFlutterWidgetFile(file)) {
-          // Private/anonymous types aren't useful as a label — fall back
-          // to the source file when we hit one of those.
-          nearest = typeName.startsWith('_') ? file : typeName;
+          nearest = typeName;
         }
       }
 

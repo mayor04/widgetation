@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../state/edits_store.dart';
@@ -25,9 +26,8 @@ class EditChatBox extends StatefulWidget {
   State<EditChatBox> createState() => _EditChatBoxState();
 }
 
-class _EditChatBoxState extends State<EditChatBox>
-    with TickerProviderStateMixin {
-  static const Size _boxSize = Size(288, 116);
+class _EditChatBoxState extends State<EditChatBox> with TickerProviderStateMixin {
+  static const Size _boxSize = Size(270, 116);
 
   late final TextEditingController _ctrl;
   late final FocusNode _focus;
@@ -39,11 +39,8 @@ class _EditChatBoxState extends State<EditChatBox>
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: widget.draft.text);
-    _focus = FocusNode();
-    _shakeCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 320),
-    );
+    _focus = FocusNode(onKeyEvent: _handleKey);
+    _shakeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 320));
     _ctrl.addListener(_publishHasText);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focus.requestFocus();
@@ -64,8 +61,7 @@ class _EditChatBoxState extends State<EditChatBox>
       _shakeCtrl.forward(from: 0);
     }
     // Keep controller text in sync on identity swap (e.g. editing flips).
-    if (old.draft.editingId != widget.draft.editingId &&
-        _ctrl.text != widget.draft.text) {
+    if (old.draft.editingId != widget.draft.editingId && _ctrl.text != widget.draft.text) {
       _ctrl.text = widget.draft.text;
     }
   }
@@ -82,6 +78,17 @@ class _EditChatBoxState extends State<EditChatBox>
 
   void _publishHasText() {
     _store?.setHasDraftText(_ctrl.text.trim().isNotEmpty);
+  }
+
+  KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey != LogicalKeyboardKey.enter &&
+        event.logicalKey != LogicalKeyboardKey.numpadEnter) {
+      return KeyEventResult.ignored;
+    }
+    if (HardwareKeyboard.instance.isShiftPressed) return KeyEventResult.ignored;
+    _commit();
+    return KeyEventResult.handled;
   }
 
   void _commit() => _store?.commitDraft(_ctrl.text);
@@ -109,9 +116,7 @@ class _EditChatBoxState extends State<EditChatBox>
       child: AnimatedBuilder(
         animation: _shakeCtrl,
         builder: (context, child) {
-          final dx = math.sin(_shakeCtrl.value * math.pi * 6) *
-              (1 - _shakeCtrl.value) *
-              10;
+          final dx = math.sin(_shakeCtrl.value * math.pi * 6) * (1 - _shakeCtrl.value) * 10;
           return Transform.translate(offset: Offset(dx, 0), child: child);
         },
         child: SizedBox(
@@ -125,19 +130,15 @@ class _EditChatBoxState extends State<EditChatBox>
                 BoxShadow(blurRadius: 16, offset: const Offset(0, 4), color: theme.shadow),
               ],
             ),
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+            padding: const EdgeInsets.fromLTRB(17, 12, 17, 12),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _Header(label: label),
                 const SizedBox(height: 8),
-                _TextInput(
-                  controller: _ctrl,
-                  focusNode: _focus,
-                  onSubmitted: (_) => _commit(),
-                ),
-                const SizedBox(height: 8),
+                _TextInput(controller: _ctrl, focusNode: _focus, onSubmitted: (_) => _commit()),
+                const SizedBox(height: 10),
                 _Footer(
                   showDelete: widget.draft.isEditing,
                   primaryLabel: widget.draft.isEditing ? 'Save' : 'Add',
@@ -163,26 +164,24 @@ class _Header extends StatelessWidget {
     final muted = WidgetationTheme.of(context).onSurfaceMuted;
     return Row(
       children: [
-        Text(
-          '›',
-          style: TextStyle(
-            color: muted,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+        SizedBox(
+          width: 14,
+          height: 14,
+          child: CustomPaint(
+            painter: ToolbarIconPainter(
+              icon: ToolbarIcon.chevronRight,
+              color: muted,
+              strokeWidth: 1.6,
+            ),
           ),
-          textDirection: TextDirection.ltr,
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 4),
         Expanded(
           child: Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: muted,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w400),
             textDirection: TextDirection.ltr,
           ),
         ),
@@ -196,11 +195,7 @@ class _TextInput extends StatelessWidget {
   final FocusNode focusNode;
   final ValueChanged<String> onSubmitted;
 
-  const _TextInput({
-    required this.controller,
-    required this.focusNode,
-    required this.onSubmitted,
-  });
+  const _TextInput({required this.controller, required this.focusNode, required this.onSubmitted});
 
   @override
   Widget build(BuildContext context) {
@@ -209,34 +204,41 @@ class _TextInput extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.surfaceMuted,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: theme.accent, width: 1.4),
+        border: Border.all(color: theme.accent, width: 1),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: Stack(
-        alignment: AlignmentDirectional.centerStart,
-        children: [
-          AnimatedBuilder(
-            animation: controller,
-            builder: (context, _) {
-              if (controller.text.isNotEmpty) return const SizedBox.shrink();
-              return Text(
-                'What should change?',
-                style: TextStyle(color: theme.onSurfaceMuted, fontSize: 14),
-                textDirection: TextDirection.ltr,
-              );
-            },
-          ),
-          EditableText(
-            controller: controller,
-            focusNode: focusNode,
-            style: TextStyle(color: theme.onSurface, fontSize: 14),
-            cursorColor: theme.onSurface,
-            backgroundCursorColor: theme.onSurfaceMuted,
-            textAlign: TextAlign.start,
-            maxLines: 1,
-            onSubmitted: onSubmitted,
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 150, minHeight: 40),
+        child: Stack(
+          alignment: AlignmentDirectional.topStart,
+          children: [
+            AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) {
+                if (controller.text.isNotEmpty) return const SizedBox.shrink();
+                return Text(
+                  'What should change?',
+                  style: TextStyle(
+                    color: theme.onSurfaceMuted.withValues(alpha: 0.5),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  textDirection: TextDirection.ltr,
+                );
+              },
+            ),
+            EditableText(
+              controller: controller,
+              focusNode: focusNode,
+              style: TextStyle(color: theme.onSurface, fontSize: 12),
+              cursorColor: theme.onSurface,
+              backgroundCursorColor: theme.onSurfaceMuted,
+              textAlign: TextAlign.start,
+              maxLines: null,
+              onSubmitted: onSubmitted,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -267,13 +269,13 @@ class _Footer extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onDelete,
             child: SizedBox(
-              width: 26,
-              height: 26,
+              width: 20,
+              height: 20,
               child: CustomPaint(
                 painter: ToolbarIconPainter(
                   icon: ToolbarIcon.trash,
                   color: theme.onSurfaceMuted,
-                  strokeWidth: 1.6,
+                  strokeWidth: 1.2,
                 ),
               ),
             ),
@@ -286,7 +288,11 @@ class _Footer extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: Text(
               'Cancel',
-              style: TextStyle(color: theme.onSurfaceMuted, fontSize: 13, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                color: theme.onSurfaceMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
               textDirection: TextDirection.ltr,
             ),
           ),
@@ -297,17 +303,10 @@ class _Footer extends StatelessWidget {
           onTap: onPrimary,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: theme.accent,
-              borderRadius: BorderRadius.circular(16),
-            ),
+            decoration: BoxDecoration(color: theme.accent, borderRadius: BorderRadius.circular(16)),
             child: Text(
               primaryLabel,
-              style: TextStyle(
-                color: theme.onAccent,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: theme.onAccent, fontSize: 11, fontWeight: FontWeight.w600),
               textDirection: TextDirection.ltr,
             ),
           ),

@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 /// Set of stroke icons used by the floating toolbar. Hand-ported from the
 /// agentation web bundle so the package ships zero asset weight and zero
 /// extra dependencies. All glyphs render into a 24×24 box.
-enum ToolbarIcon { listSparkle, eye, duplicate, trash, settings, close, pencil, plus, sun, moon, help, check }
+enum ToolbarIcon { listSparkle, eye, duplicate, trash, settings, close, pencil, plus, sun, moon, help, check, chevronRight }
 
 class ToolbarIconPainter extends CustomPainter {
   final ToolbarIcon icon;
@@ -72,6 +72,9 @@ class ToolbarIconPainter extends CustomPainter {
         break;
       case ToolbarIcon.check:
         _check(canvas, stroke);
+        break;
+      case ToolbarIcon.chevronRight:
+        _chevronRight(canvas, stroke);
         break;
     }
     canvas.restore();
@@ -345,6 +348,14 @@ class ToolbarIconPainter extends CustomPainter {
   void _plus(Canvas canvas, Paint stroke) {
     canvas.drawLine(const Offset(12.0, 6.0), const Offset(12.0, 18.0), stroke);
     canvas.drawLine(const Offset(6.0, 12.0), const Offset(18.0, 12.0), stroke);
+  }
+
+  void _chevronRight(Canvas canvas, Paint stroke) {
+    final path = Path()
+      ..moveTo(9.5, 6.0)
+      ..lineTo(15.5, 12.0)
+      ..lineTo(9.5, 18.0);
+    canvas.drawPath(path, stroke);
   }
 
   @override

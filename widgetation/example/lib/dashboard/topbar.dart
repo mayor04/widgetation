@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../design/components.dart';
 import '../design/tokens.dart';
+import 'profile_menu.dart';
 
 class DashboardTopBar extends StatelessWidget {
   const DashboardTopBar({super.key});
@@ -28,6 +29,8 @@ class DashboardTopBar extends StatelessWidget {
           _IconAction(icon: Icons.help_outline),
           SizedBox(width: AppSpacing.md),
           ButtonPrimary(label: 'New chat'),
+          SizedBox(width: AppSpacing.md),
+          ProfileAvatarButton(),
         ],
       ),
     );

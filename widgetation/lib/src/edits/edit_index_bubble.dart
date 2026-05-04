@@ -21,7 +21,7 @@ class EditIndexBubble extends StatefulWidget {
 class _EditIndexBubbleState extends State<EditIndexBubble> {
   bool _hover = false;
 
-  static const double _size = 28;
+  final double _size = 20;
 
   void _onTap() => context.read<EditsStore>().editExisting(widget.edit.id);
 
@@ -74,15 +74,13 @@ class _Bubble extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.accent,
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(blurRadius: 6, offset: const Offset(0, 2), color: theme.shadow),
-        ],
+        boxShadow: [BoxShadow(blurRadius: 6, offset: const Offset(0, 2), color: theme.shadow)],
       ),
       alignment: Alignment.center,
       child: hover
           ? SizedBox(
-              width: 16,
-              height: 16,
+              width: 14,
+              height: 14,
               child: CustomPaint(
                 painter: ToolbarIconPainter(
                   icon: ToolbarIcon.pencil,
@@ -93,11 +91,7 @@ class _Bubble extends StatelessWidget {
             )
           : Text(
               '$number',
-              style: TextStyle(
-                color: theme.onAccent,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: theme.onAccent, fontSize: 10, fontWeight: FontWeight.w700),
               textDirection: TextDirection.ltr,
             ),
     );
@@ -126,9 +120,7 @@ class _HoverPopover extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.surfaceElevated,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(blurRadius: 8, offset: const Offset(0, 2), color: theme.shadow),
-          ],
+          boxShadow: [BoxShadow(blurRadius: 8, offset: const Offset(0, 2), color: theme.shadow)],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,21 +129,13 @@ class _HoverPopover extends StatelessWidget {
             if (label.isNotEmpty)
               Text(
                 label,
-                style: TextStyle(
-                  color: fgMuted,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                ),
+                style: TextStyle(color: fgMuted, fontSize: 12, fontStyle: FontStyle.italic),
                 textDirection: TextDirection.ltr,
               ),
             if (label.isNotEmpty) const SizedBox(height: 4),
             Text(
               edit.text,
-              style: TextStyle(
-                color: fg,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(color: fg, fontSize: 14, fontWeight: FontWeight.w500),
               textDirection: TextDirection.ltr,
             ),
           ],

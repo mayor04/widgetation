@@ -72,7 +72,7 @@ class _DraftPlusBubble extends StatelessWidget {
   final Offset cursor;
   const _DraftPlusBubble({required this.cursor});
 
-  static const double _size = 28;
+  static const double _size = 20;
 
   @override
   Widget build(BuildContext context) {
@@ -87,10 +87,9 @@ class _DraftPlusBubble extends StatelessWidget {
           decoration: BoxDecoration(
             color: theme.accent,
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(blurRadius: 6, offset: const Offset(0, 2), color: theme.shadow),
-            ],
+            boxShadow: [BoxShadow(blurRadius: 6, offset: const Offset(0, 2), color: theme.shadow)],
           ),
+          padding: EdgeInsets.all(4),
           child: CustomPaint(
             painter: ToolbarIconPainter(
               icon: ToolbarIcon.plus,

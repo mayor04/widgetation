@@ -78,41 +78,43 @@ class _SelectionPainter extends CustomPainter {
     required this.accent,
   });
 
+  static const Radius _radius = Radius.circular(4);
+
   @override
   void paint(Canvas canvas, Size size) {
     if (hover != null && hover != selected) {
-      final r = _toRect(hover!);
+      final rr = RRect.fromRectAndRadius(_toRect(hover!), _radius);
       final p = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
+        ..strokeWidth = 1.2
         ..color = accent.withAlpha(0x88);
-      canvas.drawRect(r, p);
+      canvas.drawRRect(rr, p);
     }
     final union = unionRect;
     if (union != null) {
-      canvas.drawRect(union, Paint()..color = accent.withAlpha(0x22));
-      canvas.drawRect(
-        union,
+      final rr = RRect.fromRectAndRadius(union, _radius);
+      canvas.drawRRect(rr, Paint()..color = accent.withAlpha(0x10));
+      canvas.drawRRect(
+        rr,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
+          ..strokeWidth = 1.4
           ..color = accent,
       );
     } else if (selected != null) {
-      final r = _toRect(selected!);
-      canvas.drawRect(r, Paint()..color = accent.withAlpha(0x22));
-      canvas.drawRect(
-        r,
+      final rr = RRect.fromRectAndRadius(_toRect(selected!), _radius);
+      canvas.drawRRect(rr, Paint()..color = accent.withAlpha(0x10));
+      canvas.drawRRect(
+        rr,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
+          ..strokeWidth = 1.4
           ..color = accent,
       );
     }
   }
 
-  Rect _toRect(TreeNode n) =>
-      Rect.fromLTWH(n.rect.x, n.rect.y, n.rect.w, n.rect.h);
+  Rect _toRect(TreeNode n) => Rect.fromLTWH(n.rect.x, n.rect.y, n.rect.w, n.rect.h);
 
   @override
   bool shouldRepaint(covariant _SelectionPainter old) =>
@@ -161,8 +163,7 @@ class SelectionInfoChip extends StatelessWidget {
                       top: top,
                       child: RepaintBoundary(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: theme.surfaceElevated,
                             borderRadius: BorderRadius.circular(6),
