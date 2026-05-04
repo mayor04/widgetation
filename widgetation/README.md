@@ -4,6 +4,9 @@
 
 Widgetation turns UI annotations into structured context that AI coding agents can understand and act on. Click any element, add a note, and paste the output into Claude Code, Codex, or any AI tool.
 
+<img width="1148" height="953" alt="image" src="https://github.com/user-attachments/assets/4ad3c720-23a5-4992-9dbd-023a45ac2b22" />
+
+
 Inspired by [agentation](https://www.agentation.com/).
 
 ## How you use it
