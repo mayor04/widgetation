@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 
-import '../config.dart';
 import '../state/preferences_store.dart';
 import '../state/widgetation_store.dart';
 import '../theme.dart';
@@ -9,19 +8,12 @@ import 'wordmark_painter.dart';
 
 /// Card surfaced above the toolbar via [OverlayPortal] when the user taps
 /// the gear button. Hosts the brand header (wordmark + version + theme
-/// toggle), the marker color picker, the clear-on-copy/send toggle, and a
-/// demoted connection-status block.
+/// toggle), the marker color picker, and the clear-on-copy/send toggle.
 class ToolbarStatusPopup extends StatelessWidget {
-  final WidgetationConfig config;
-  final bool viewerConnected;
-  final bool serverRunning;
   final VoidCallback onDismiss;
 
   const ToolbarStatusPopup({
     super.key,
-    required this.config,
-    required this.viewerConnected,
-    required this.serverRunning,
     required this.onDismiss,
   });
 
@@ -354,73 +346,3 @@ class _Checkbox extends StatelessWidget {
   }
 }
 
-class _ConnectionRows extends StatelessWidget {
-  final WidgetationConfig config;
-  final bool serverRunning;
-  final bool viewerConnected;
-  const _ConnectionRows({
-    required this.config,
-    required this.serverRunning,
-    required this.viewerConnected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ConnectionRow(label: 'Mode', value: config.mode.name),
-        _ConnectionRow(label: 'Host', value: '${config.host}:${config.port}'),
-        _ConnectionRow(label: 'FPS', value: '${config.clampedFps}'),
-        _ConnectionRow(
-          label: 'Server',
-          value: serverRunning ? 'running' : 'idle',
-          dotColor: serverRunning ? const Color(0xFF22C55E) : const Color(0x66FFFFFF),
-        ),
-        _ConnectionRow(
-          label: 'Viewer',
-          value: viewerConnected ? 'connected' : 'idle',
-          dotColor: viewerConnected ? const Color(0xFF22C55E) : const Color(0x66FFFFFF),
-        ),
-      ],
-    );
-  }
-}
-
-class _ConnectionRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? dotColor;
-  const _ConnectionRow({required this.label, required this.value, this.dotColor});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = WidgetationTheme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: TextStyle(color: theme.onSurfaceMuted, fontSize: 10),
-            textDirection: TextDirection.ltr,
-          ),
-          const Spacer(),
-          if (dotColor != null) ...[
-            Container(
-              width: 5,
-              height: 5,
-              decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 5),
-          ],
-          Text(
-            value,
-            style: TextStyle(color: theme.onSurface, fontSize: 10, fontWeight: FontWeight.w500),
-            textDirection: TextDirection.ltr,
-          ),
-        ],
-      ),
-    );
-  }
-}

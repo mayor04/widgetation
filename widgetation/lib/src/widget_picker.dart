@@ -1,7 +1,7 @@
 import 'package:flutter/rendering.dart' show RenderFollowerLayer, RenderTransform;
 import 'package:flutter/widgets.dart';
 
-import 'protocol/tree_node.dart' show TreeNode;
+import 'tree_node.dart' show TreeNode;
 import 'tree_builder.dart';
 
 /// Element-tree hit tester for on-device select mode.

@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import 'protocol/tree_node.dart';
+import 'tree_node.dart';
 
 /// True when [file] points at code we don't consider user-owned: the
 /// Flutter SDK itself or any third-party package resolved through the

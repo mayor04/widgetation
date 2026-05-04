@@ -1,8 +1,4 @@
-/// Typed model for a node in the streamed widget tree.
-///
-/// This file is the wire-format source of truth on the streamer side. The
-/// viewer keeps its own decoded copy; both ends must agree on the keys
-/// produced by [toJson].
+/// Typed model for a node picked out of the live element tree.
 class Rect {
   final double x, y, w, h;
   const Rect(this.x, this.y, this.w, this.h);
@@ -19,10 +15,9 @@ class TreeNode {
   final int? line;
 
   /// Type name of the closest non-flutter ancestor of this node, walking
-  /// upward through the element tree. Falls back to the ancestor's source
-  /// file path if the type is private/anonymous. Null when no non-flutter
-  /// ancestor exists, or when the streamer didn't bother computing it
-  /// (only the picker-selected node carries this).
+  /// upward through the element tree. Null when no non-flutter ancestor
+  /// exists, or when ancestry wasn't computed (only the picker-selected
+  /// node carries this).
   final String? nearestWidget;
 
   /// Up to 4 widget type names along the ancestor chain, outermost-first,
@@ -61,20 +56,4 @@ class TreeNode {
         nearestWidget: nearestWidget ?? this.nearestWidget,
         ancestors: ancestors ?? this.ancestors,
       );
-
-  Map<String, Object?> toJson() => <String, Object?>{
-        'type': type,
-        'depth': depth,
-        'x': rect.x,
-        'y': rect.y,
-        'w': rect.w,
-        'h': rect.h,
-        'widgetProperties': widgetProperties,
-        if (key != null) 'key': key,
-        if (file != null) 'file': file,
-        if (line != null) 'line': line,
-        if (nearestWidget != null) 'nearestWidget': nearestWidget,
-        if (ancestors.isNotEmpty) 'ancestors': ancestors,
-        'children': children.map((c) => c.toJson()).toList(),
-      };
 }

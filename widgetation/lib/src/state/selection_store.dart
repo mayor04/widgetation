@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import '../protocol/tree_node.dart' show TreeNode;
+import '../tree_node.dart' show TreeNode;
 import 'widgetation_store.dart';
 
 @immutable

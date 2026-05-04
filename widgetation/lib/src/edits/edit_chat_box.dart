@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import '../protocol/tree_node.dart';
+import '../tree_node.dart';
 import '../state/edits_store.dart';
 import '../state/selection_store.dart';
 import '../state/widgetation_store.dart';

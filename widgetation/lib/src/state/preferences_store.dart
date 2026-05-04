@@ -51,9 +51,7 @@ class PreferencesStore extends WidgetationStore<PreferencesState> {
         markerColorIndex: prefs.getInt(_kMarkerIndex) ?? value.markerColorIndex,
         clearOnCopy: prefs.getBool(_kClearOnCopy) ?? value.clearOnCopy,
       ));
-    } catch (e) {
-      debugPrint('[widgetation] preferences load failed: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> setThemeMode(WidgetationThemeMode mode) async {
@@ -88,26 +86,20 @@ class PreferencesStore extends WidgetationStore<PreferencesState> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(key, value);
-    } catch (e) {
-      debugPrint('[widgetation] preferences write $key failed: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _writeInt(String key, int value) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(key, value);
-    } catch (e) {
-      debugPrint('[widgetation] preferences write $key failed: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _writeBool(String key, bool value) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(key, value);
-    } catch (e) {
-      debugPrint('[widgetation] preferences write $key failed: $e');
-    }
+    } catch (_) {}
   }
 }

@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
-import '../config.dart';
 import '../state/edits_store.dart';
 import '../state/widgetation_store.dart';
 import '../theme.dart';
@@ -16,13 +15,7 @@ import 'toolbar_icons.dart';
 /// to surface a status popup via [OverlayPortal].
 class WidgetationToolbar extends StatefulWidget {
   final AlignmentGeometry alignment;
-  final WidgetationConfig config;
 
-  // Live state from the host widget.
-  final bool serverRunning;
-  final bool viewerConnected;
-
-  // Callbacks.
   final VoidCallback onCopyEdits;
   final VoidCallback onDeleteEdits;
   final VoidCallback onToggleEditsHidden;
@@ -32,9 +25,6 @@ class WidgetationToolbar extends StatefulWidget {
   const WidgetationToolbar({
     super.key,
     required this.alignment,
-    required this.config,
-    required this.serverRunning,
-    required this.viewerConnected,
     required this.onCopyEdits,
     required this.onDeleteEdits,
     required this.onToggleEditsHidden,

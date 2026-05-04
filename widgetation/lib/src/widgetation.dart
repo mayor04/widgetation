@@ -1,39 +1,30 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter/widgets.dart';
 
 import 'config.dart';
-import 'edits/edit_label.dart';
-import 'edits/edits_layer.dart';
-import 'frame_capturer.dart';
-import 'marquee_overlay.dart';
-import 'select_mode_overlay.dart';
+import 'edits_clipboard.dart';
+import 'select_mode_layer.dart';
+import 'settings_gate.dart';
 import 'state/edits_store.dart';
 import 'state/hover_store.dart';
 import 'state/preferences_store.dart';
 import 'state/selection_store.dart';
 import 'state/ui_state_store.dart';
 import 'state/widgetation_store.dart';
-import 'streaming_server.dart';
-import 'theme.dart';
-import 'toolbar/status_popup.dart';
+import 'themed_host.dart';
 import 'toolbar/toolbar.dart';
-import 'tree_builder.dart';
 import 'widget_picker.dart';
 
-/// Wrap your app's root with [Widgetation] to expose a local WebSocket
-/// server that streams screenshots + widget tree metadata on demand.
+/// Wrap your app's root with [Widgetation] to mount an on-device inspector
+/// overlay. Tap the floating button to enter select mode, pick widgets,
+/// and attach feedback notes.
 ///
 /// ```dart
 /// void main() {
 ///   runApp(const Widgetation(child: MyApp()));
 /// }
 /// ```
-///
-/// Capture is gated: it only runs while a viewer is connected and reports
-/// itself focused. There is no continuous overhead during normal use.
 class Widgetation extends StatefulWidget {
   /// Your application's root widget.
   final Widget child;
@@ -48,11 +39,7 @@ class Widgetation extends StatefulWidget {
 }
 
 class _WidgetationState extends State<Widgetation> {
-  final GlobalKey _captureKey = GlobalKey(debugLabel: 'widgetation.capture');
-  StreamingServer? _server;
-  FrameCapturer? _capturer;
-  Timer? _timer;
-  bool _busy = false;
+  final GlobalKey _rootKey = GlobalKey(debugLabel: 'widgetation.root');
 
   WidgetPicker? _picker;
 
@@ -72,9 +59,7 @@ class _WidgetationState extends State<Widgetation> {
     super.initState();
     final cfg = widget.config;
     if (!cfg.isActive || kReleaseMode) return;
-    if (cfg.mode == WidgetationMode.image) {
-      _boot();
-    } else if (cfg.mode == WidgetationMode.edit) {
+    if (cfg.mode == WidgetationMode.edit) {
       _picker = WidgetPicker();
       _selection = SelectionStore();
       _hover = HoverStore();
@@ -83,65 +68,8 @@ class _WidgetationState extends State<Widgetation> {
     }
   }
 
-  Future<void> _boot() async {
-    final cfg = widget.config;
-    final server = StreamingServer(host: cfg.host, port: cfg.port, name: cfg.name);
-    try {
-      await server.start();
-    } catch (e) {
-      debugPrint('[widgetation] failed to bind ${cfg.host}:${cfg.port}: $e');
-      return;
-    }
-    server.shouldCapture.addListener(_onShouldCaptureChanged);
-    _server = server;
-    _capturer = FrameCapturer(
-      boundaryKey: _captureKey,
-      treeBuilder: TreeBuilder(),
-      pixelRatioOverride: cfg.pixelRatio,
-    );
-    if (server.shouldCapture.value) _onShouldCaptureChanged();
-  }
-
-  void _onShouldCaptureChanged() {
-    final should = _server?.shouldCapture.value ?? false;
-    if (should) {
-      _start();
-    } else {
-      _stop();
-    }
-  }
-
-  void _start() {
-    _timer?.cancel();
-    final fps = (_server?.requestedFps.value ?? widget.config.clampedFps).clamp(1, 30);
-    final period = Duration(milliseconds: (1000 / fps).round());
-    _timer = Timer.periodic(period, (_) => _tick());
-  }
-
-  void _stop() {
-    _timer?.cancel();
-    _timer = null;
-  }
-
-  Future<void> _tick() async {
-    if (_busy) return;
-    if (_server?.hasViewer != true) return;
-    _busy = true;
-    try {
-      final frame = await _capturer?.captureOnce();
-      if (frame != null) _server?.send(frame);
-    } catch (e, st) {
-      debugPrint('[widgetation] capture failed: $e\n$st');
-    } finally {
-      _busy = false;
-    }
-  }
-
   @override
   void dispose() {
-    _timer?.cancel();
-    _server?.shouldCapture.removeListener(_onShouldCaptureChanged);
-    _server?.stop();
     _selection?.dispose();
     _hover?.dispose();
     _edits?.dispose();
@@ -155,7 +83,7 @@ class _WidgetationState extends State<Widgetation> {
     final cfg = widget.config;
     if (!cfg.isActive || kReleaseMode) return widget.child;
 
-    final wrapped = RepaintBoundary(key: _captureKey, child: widget.child);
+    final wrapped = RepaintBoundary(key: _rootKey, child: widget.child);
     if (cfg.mode != WidgetationMode.edit) return wrapped;
 
     // Widgetation sits above MaterialApp, so there is no Directionality or
@@ -182,17 +110,15 @@ class _WidgetationState extends State<Widgetation> {
                   children: [
                     // User app — stable sibling, never re-rendered by
                     // inspector state. Already a RepaintBoundary anchored
-                    // by _captureKey.
+                    // by _rootKey.
                     wrapped,
-                    // Swallows pointer events while select mode is on so
-                    // taps and pans go to the inspector overlay instead
-                    // of the user's scrollables. Sits above the user app
-                    // and below the gesture overlay in the Stack.
-                    _SelectModeAbsorber(active: _ui.selectActive),
                     // Gesture overlay + visual highlights + edits + chat
                     // box. Mounts only when select mode is active. Owns
-                    // its own theme subscription.
-                    _SelectModeOverlays(
+                    // its own theme subscription. Uses a translucent
+                    // gesture surface so trackpad pan-zoom and mouse
+                    // wheel reach the user's scrollables; inspector
+                    // tap/drag recognizers still win the gesture arena.
+                    SelectModeLayer(
                       ui: _ui,
                       onHover: _onHover,
                       onTapAt: _onTapAt,
@@ -203,13 +129,10 @@ class _WidgetationState extends State<Widgetation> {
                     ),
                     // Toolbar — always mounted; subscribes to theme on
                     // its own, and to EditsStore inside its expanded row.
-                    _ThemedHost(
+                    ThemedHost(
                       child: RepaintBoundary(
                         child: WidgetationToolbar(
                           alignment: cfg.selectButtonAlignment,
-                          config: cfg,
-                          serverRunning: _server != null,
-                          viewerConnected: _server?.hasViewer ?? false,
                           onCopyEdits: _copyAllEdits,
                           onDeleteEdits: _deleteAllEdits,
                           onToggleEditsHidden: _toggleEditsHidden,
@@ -219,11 +142,8 @@ class _WidgetationState extends State<Widgetation> {
                       ),
                     ),
                     // Settings popup — mounts only when settingsOpen.
-                    _SettingsGate(
+                    SettingsGate(
                       open: _ui.settingsOpen,
-                      config: cfg,
-                      serverRunning: _server != null,
-                      viewerConnected: _server?.hasViewer ?? false,
                       onDismiss: _closeSettings,
                     ),
                   ],
@@ -257,7 +177,7 @@ class _WidgetationState extends State<Widgetation> {
   void _copyAllEdits() {
     final edits = _edits?.value.edits ?? const [];
     if (edits.isEmpty) return;
-    Clipboard.setData(ClipboardData(text: _formatEditsForClipboard(edits)));
+    Clipboard.setData(ClipboardData(text: formatEditsForClipboard(edits)));
     if (_prefs?.value.clearOnCopy ?? false) {
       // Don't destroy work if a draft is mid-compose; nudge the chat box
       // so the user notices instead.
@@ -276,7 +196,7 @@ class _WidgetationState extends State<Widgetation> {
   void _toggleEditsHidden() => _edits?.toggleHidden();
 
   Element? _root() {
-    final ctx = _captureKey.currentContext;
+    final ctx = _rootKey.currentContext;
     return ctx is Element ? ctx : null;
   }
 
@@ -309,11 +229,6 @@ class _WidgetationState extends State<Widgetation> {
     _selection?.select(hit);
     if (hit != null) {
       _edits?.beginCompose(cursor: pos, node: hit);
-      debugPrint('#--> type=${hit.type}');
-      debugPrint('     nearest=${hit.nearestWidget}');
-      debugPrint('     ancestors=${hit.ancestors.join(' › ')}');
-      debugPrint('     file=${hit.file}:${hit.line}');
-      debugPrint('     props=${hit.widgetProperties}');
     }
   }
 
@@ -379,187 +294,4 @@ class _WidgetationState extends State<Widgetation> {
     _selection?.selectMany(hits);
     _edits?.beginComposeMulti(cursor: end, nodes: hits, selectRect: union);
   }
-}
-
-/// Rebuilds only when `selectActive` flips. Mounts a full-screen
-/// `AbsorbPointer` so taps and pans don't reach the user's app while
-/// the inspector owns input.
-class _SelectModeAbsorber extends StatelessWidget {
-  final ValueListenable<bool> active;
-
-  const _SelectModeAbsorber({required this.active});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: active,
-      builder: (context, on, _) {
-        if (!on) return const SizedBox.shrink();
-        return const Positioned.fill(
-          child: RepaintBoundary(
-            child: AbsorbPointer(child: SizedBox.expand()),
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Inspector visuals: gesture overlay, marquee paint, selection highlights,
-/// info chip, edits layer. Mounts only while `selectActive` is true and
-/// hosts its own [WidgetationTheme] consumer so theme changes don't
-/// invalidate widgets above.
-class _SelectModeOverlays extends StatelessWidget {
-  final UiStateStore ui;
-  final void Function(Offset?) onHover;
-  final void Function(Offset) onTapAt;
-  final GestureDragStartCallback onPanStart;
-  final GestureDragUpdateCallback onPanUpdate;
-  final GestureDragEndCallback onPanEnd;
-  final GestureDragCancelCallback onPanCancel;
-
-  const _SelectModeOverlays({
-    required this.ui,
-    required this.onHover,
-    required this.onTapAt,
-    required this.onPanStart,
-    required this.onPanUpdate,
-    required this.onPanEnd,
-    required this.onPanCancel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: ui.selectActive,
-      builder: (context, on, _) {
-        if (!on) return const SizedBox.shrink();
-        return _ThemedHost(
-          child: RepaintBoundary(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: MouseRegion(
-                    onHover: (e) => onHover(e.position),
-                    onExit: (_) => onHover(null),
-                    cursor: SystemMouseCursors.precise,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTapDown: (d) => onHover(d.globalPosition),
-                      onTapUp: (d) => onTapAt(d.globalPosition),
-                      onTapCancel: () => onHover(null),
-                      onPanStart: onPanStart,
-                      onPanUpdate: onPanUpdate,
-                      onPanEnd: onPanEnd,
-                      onPanCancel: onPanCancel,
-                    ),
-                  ),
-                ),
-                MarqueeOverlay(rect: ui.marquee),
-                // Each of these returns a Positioned.fill / Positioned
-                // internally, so they must be DIRECT children of the Stack
-                // (Positioned applies parent data to its render-tree child
-                // and requires the render parent to be a RenderStack — a
-                // wrapping RepaintBoundary would break that). Each widget
-                // wraps its own contents in a RepaintBoundary internally.
-                const SelectionHighlights(),
-                const SelectionInfoChip(),
-                const EditsLayer(),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Mounts the settings popup only while `open` is true. Hosts its own
-/// theme consumer so opening/closing it doesn't ripple to the toolbar
-/// or the select-mode overlay.
-class _SettingsGate extends StatelessWidget {
-  final ValueListenable<bool> open;
-  final WidgetationConfig config;
-  final bool serverRunning;
-  final bool viewerConnected;
-  final VoidCallback onDismiss;
-
-  const _SettingsGate({
-    required this.open,
-    required this.config,
-    required this.serverRunning,
-    required this.viewerConnected,
-    required this.onDismiss,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: open,
-      builder: (context, isOpen, _) {
-        if (!isOpen) return const SizedBox.shrink();
-        return _ThemedHost(
-          child: RepaintBoundary(
-            child: ToolbarStatusPopup(
-              config: config,
-              serverRunning: serverRunning,
-              viewerConnected: viewerConnected,
-              onDismiss: onDismiss,
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Subscribes to [PreferencesStore] and republishes the resulting
-/// [WidgetationThemeData] via [WidgetationTheme]. Scoped per consumer
-/// so theme changes don't bubble through the entire widget tree — only
-/// the subtree below this host rebuilds.
-class _ThemedHost extends StatelessWidget {
-  final Widget child;
-
-  const _ThemedHost({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return StoreBuilder<PreferencesStore, PreferencesState>(
-      builder: (context, prefs) {
-        final base = prefs.themeMode == WidgetationThemeMode.light
-            ? kWidgetationLightTheme
-            : kWidgetationDarkTheme;
-        final theme = base.withAccent(prefs.markerColor);
-        return WidgetationTheme(data: theme, child: child);
-      },
-    );
-  }
-}
-
-String _formatEditsForClipboard(List<Edit> edits) {
-  final sb = StringBuffer('### **Page Feedback List**\n\n');
-  for (final edit in edits) {
-    final label = edit.nodes.isEmpty
-        ? '(unknown)'
-        : formatMultiNodeLabel(edit.nodes);
-    final source = _formatEditSources(edit);
-    sb.writeln('${edit.index}. $label');
-    sb.writeln('Source: $source');
-    sb.writeln('Feedback: ${edit.text}');
-    sb.writeln();
-  }
-  return sb.toString().trimRight();
-}
-
-String _formatEditSources(Edit edit) {
-  if (edit.nodes.isEmpty) return '(unknown)';
-  final parts = <String>{};
-  for (var i = 0; i < edit.nodes.length; i++) {
-    final node = edit.nodes[i];
-    final file = i < edit.files.length ? edit.files[i] : node.file;
-    if (file == null) continue;
-    parts.add('$file:${node.line ?? '?'}');
-  }
-  if (parts.isEmpty) return '(unknown)';
-  return parts.join(', ');
 }

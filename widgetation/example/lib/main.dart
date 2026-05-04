@@ -5,12 +5,7 @@ import 'dashboard/dashboard_page.dart';
 import 'design/tokens.dart';
 
 void main() {
-  runApp(
-    const Widgetation(
-      config: WidgetationConfig(name: 'widgetation example', fps: 8),
-      child: ExampleApp(),
-    ),
-  );
+  runApp(const Widgetation(child: ExampleApp()));
 }
 
 class ExampleApp extends StatelessWidget {

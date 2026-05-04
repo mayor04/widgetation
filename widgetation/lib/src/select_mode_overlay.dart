@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import 'protocol/tree_node.dart' show TreeNode;
+import 'tree_node.dart' show TreeNode;
 import 'state/edits_store.dart';
 import 'state/hover_store.dart';
 import 'state/selection_store.dart';

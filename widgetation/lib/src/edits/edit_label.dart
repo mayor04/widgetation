@@ -1,4 +1,4 @@
-import '../protocol/tree_node.dart';
+import '../tree_node.dart';
 
 /// Build the heading text for the chat box / hover popover.
 ///
