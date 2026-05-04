@@ -1,3 +1,8 @@
+## 0.2.1
+
+* Lower SDK floor to Dart 3.0 / Flutter 3.10 so the package works on older
+  Flutter versions.
+
 ## 0.2.0
 
 Replaces the WebSocket-viewer architecture with an on-device overlay. Wrap
