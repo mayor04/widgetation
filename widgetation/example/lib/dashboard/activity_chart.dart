@@ -86,25 +86,20 @@ class _BarChart extends StatelessWidget {
       ...agents,
     ].reduce((a, b) => a > b ? a : b);
 
-    return LayoutBuilder(
-      builder: (context, c) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            for (var i = 0; i < days.length; i++) ...[
-              Expanded(
-                child: _BarGroup(
-                  day: days[i],
-                  chatHeight: chats[i] / maxV,
-                  agentHeight: agents[i] / maxV,
-                  available: c.maxHeight - 24,
-                ),
-              ),
-              if (i < days.length - 1) const SizedBox(width: 8),
-            ],
-          ],
-        );
-      },
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < days.length; i++) ...[
+          Expanded(
+            child: _BarGroup(
+              day: days[i],
+              chatHeight: chats[i] / maxV,
+              agentHeight: agents[i] / maxV,
+            ),
+          ),
+          if (i < days.length - 1) const SizedBox(width: 8),
+        ],
+      ],
     );
   }
 }
@@ -113,29 +108,26 @@ class _BarGroup extends StatelessWidget {
   final String day;
   final double chatHeight;
   final double agentHeight;
-  final double available;
   const _BarGroup({
     required this.day,
     required this.chatHeight,
     required this.agentHeight,
-    required this.available,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        SizedBox(
-          height: available,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(child: _Bar(height: available * chatHeight, color: AppColors.primary)),
-              const SizedBox(width: 4),
-              Expanded(child: _Bar(height: available * agentHeight, color: AppColors.accentTeal)),
-            ],
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, c) => Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(child: _Bar(height: c.maxHeight * chatHeight, color: AppColors.primary)),
+                const SizedBox(width: 4),
+                Expanded(child: _Bar(height: c.maxHeight * agentHeight, color: AppColors.accentTeal)),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 8),
